@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/recall_platform.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/editor/platform.svg" id="2_abgrh"]
+[ext_resource type="Script" path="res://scripts/editor_icon.gd" id="3_afx6v"]
+
+[sub_resource type="RectangleShape2D" id="Shape"]
+size = Vector2(16, 4)
+
+[node name="RecallPlatform" type="StaticBody2D" unique_id=1525996363]
+collision_mask = 6
+script = ExtResource("1")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=2112702250]
+shape = SubResource("Shape")
+
+[node name="EditorIcon" type="Sprite2D" parent="." unique_id=84767453]
+texture = ExtResource("2_abgrh")
+script = ExtResource("3_afx6v")

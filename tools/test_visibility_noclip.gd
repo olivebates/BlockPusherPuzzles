@@ -1,0 +1,110 @@
+extends SceneTree
+var failures := 0
+func _initialize() -> void: call_deferred("run")
+func check(value: bool, message: String) -> void:
+	print(("PASS: " if value else "FAIL: ")+message)
+	if not value: failures += 1
+func frames(count: int) -> void:
+	for i in count: await physics_frame
+func key(code: Key, pressed: bool) -> void:
+	var event := InputEventKey.new()
+	event.physical_keycode = code
+	event.keycode = code
+	event.pressed = pressed
+	Input.parse_input_event(event)
+	Input.flush_buffered_events()
+func run() -> void:
+	create_timer(30,true).timeout.connect(func(): quit(99))
+	var game: Node2D = load("res://tools/test_world.gd").new().level()
+	root.add_child(game)
+	current_scene = game
+	await frames(10)
+	var player: CharacterBody2D = get_first_node_in_group("player")
+	var objects := game.get_node("Objects")
+	Input.action_press("jump")
+	await frames(3)
+	Input.action_release("jump")
+	check(player.get_node("Visual").texture.resource_path.ends_with("playerSpriteJumpUp.png"),"Jump ascent uses the upward sprite")
+	await frames(23)
+	check(player.get_node("Visual").texture.resource_path.ends_with("playerSpriteJumpDown.png"),"Falling uses the downward sprite")
+	await frames(35)
+	check(player.get_node("Visual").texture.resource_path.ends_with("playerSprite.png"),"Landing restores the standing sprite")
+	player.position = Vector2(800,200)
+	var wall := StaticBody2D.new()
+	var collider := CollisionShape2D.new()
+	var shape := RectangleShape2D.new()
+	shape.size = Vector2(16,80)
+	collider.shape = shape
+	wall.add_child(collider)
+	wall.position = Vector2(832,200)
+	game.add_child(wall)
+	key(KEY_SHIFT,true)
+	key(KEY_D,true)
+	await frames(20)
+	check(player.noclip and player.collision_layer==0 and player.collision_mask==0,"Holding Shift disables both directions of collision")
+	check(player.position.x>880 and absf(player.position.y-200)<0.01 and is_equal_approx(player.velocity.x,300),"Noclip flies through a wall at 3x speed without gravity")
+	key(KEY_D,false)
+	key(KEY_LEFT,true)
+	key(KEY_UP,true)
+	await frames(3)
+	check(player.velocity.x<0 and player.velocity.y<0 and is_equal_approx(player.velocity.length(),300) and player.get_node("Visual").flip_h,"Arrow keys fly diagonally at normalized speed and flip the sprite")
+	key(KEY_UP,false)
+	key(KEY_LEFT,false)
+	await frames(3)
+	var hover := player.position
+	await frames(5)
+	check(player.position==hover,"Noclip hovers when movement keys are released")
+	key(KEY_SHIFT,false)
+	await frames(2)
+	check(not player.noclip and player.collision_layer==2 and player.collision_mask==5 and player.velocity.y>0,"Releasing Shift restores collisions and gravity")
+	player.set_physics_process(false)
+	player.position = Vector2(832,313)
+	var block: CharacterBody2D = load(LevelData.SCENES[2]).instantiate()
+	block.position = Vector2(832,264)
+	objects.add_child(block)
+	wall.queue_free()
+	await frames(60)
+	check(absf(block.position.y-296)<0.2 and block.supported_by_player,"Falling box waits on the grid tile above the player")
+	await frames(20)
+	check(absf(block.position.y-296)<0.2 and absf(player.position.y-313)<0.01,"Waiting box neither drifts off-grid nor pushes the player")
+	player.position.x = 900
+	await frames(40)
+	check(absf(block.position.y-312)<0.2,"Box resumes falling after the player moves out")
+	player.position = block.home
+	player.update_recall_target()
+	check(not player.show_recall_prompt,"Moved box with clear sides hides the recall prompt at its spawn")
+	block.reset_home()
+	player.position = block.home
+	player.update_recall_target()
+	check(not player.show_recall_prompt and not block.recall_available,"A box at its original position has no recall prompt or highlight")
+	var camera: Camera2D = game.get_node("Camera")
+	camera.set_process(false)
+	camera.position = Vector2(568,280)
+	camera.force_update_scroll()
+	var guide := game.get_node("PlatformGuide")
+	var platform := objects.get_node("RecallPlatformB")
+	platform.activated = true
+	player.position = Vector2(550,313)
+	await frames(3)
+	check(guide.nearest==platform and guide.platform_visible(platform),"Visible activated platform is selected")
+	camera.position = Vector2(5000,280)
+	camera.force_update_scroll()
+	await frames(3)
+	check(guide.nearest==null and not platform.nearest,"Off-screen platforms lose their guide and prompt")
+	guide.nearest = platform
+	check(not guide.recall(),"Even a stale off-screen target cannot teleport the player")
+	player.position = Vector2(56,100)
+	await frames(3)
+	check(guide.key_links().is_empty(),"Key links are hidden when the player is far from their circuit")
+	player.position = objects.get_node("Pad_0").position+Vector2(0,-16)
+	await frames(3)
+	check(guide.key_links().size()==3,"Approaching one key reveals every key connected to its door")
+	player.position = objects.get_node("Door_B").position+Vector2(16,0)
+	await frames(3)
+	check(guide.key_links().size()==1,"Approaching a door reveals only its own linked keys")
+	check(guide.key_canvas.z_index+guide.z_index>game.get_node("Walls").z_index,"Key links draw above walls while the platform guide stays behind them")
+	current_scene = null
+	game.queue_free()
+	await process_frame
+	print("VISIBILITY AND NOCLIP: ","PASS" if failures==0 else "FAIL")
+	quit(failures)

@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+[ext_resource type="Shader" path="res://shaders/surface.gdshader" id="1_uu2rh"]
+[ext_resource type="Script" path="res://scripts/pad.gd" id="2_tch6t"]
+[ext_resource type="Texture2D" path="res://assets/editor/key.svg" id="3_42pwk"]
+[ext_resource type="Script" path="res://scripts/editor_icon.gd" id="4_niejy"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_yp7i5"]
+resource_local_to_scene = true
+shader = ExtResource("1_uu2rh")
+shader_parameter/tint = null
+shader_parameter/energy = null
+
+[node name="MatchingPad" type="Node2D" unique_id=707872133]
+z_index = -1
+material = SubResource("ShaderMaterial_yp7i5")
+script = ExtResource("2_tch6t")
+
+[node name="EditorIcon" type="Sprite2D" parent="." unique_id=1562842345]
+scale = Vector2(0.75, 0.75)
+texture = ExtResource("3_42pwk")
+script = ExtResource("4_niejy")

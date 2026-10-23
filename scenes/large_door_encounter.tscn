@@ -1,0 +1,22 @@
+[gd_scene load_steps=5 format=3]
+[ext_resource type="PackedScene" path="res://scenes/large_door.tscn" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/npc_fox.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/indicator.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://scenes/collectible.tscn" id="4"]
+[node name="LargeDoorEncounter" type="Node2D"]
+[node name="Door" parent="." instance=ExtResource("1")]
+position = Vector2(160,0)
+[node name="Sunny" parent="." instance=ExtResource("2")]
+position = Vector2(120,1)
+[node name="Indicator1" parent="." instance=ExtResource("3")]
+position = Vector2(128,-12)
+[node name="Indicator2" parent="." instance=ExtResource("3")]
+position = Vector2(144,-12)
+[node name="Indicator3" parent="." instance=ExtResource("3")]
+position = Vector2(160,-12)
+[node name="Pickup1" parent="." instance=ExtResource("4")]
+position = Vector2(-48,-8)
+[node name="Pickup2" parent="." instance=ExtResource("4")]
+position = Vector2(-16,-8)
+[node name="Pickup3" parent="." instance=ExtResource("4")]
+position = Vector2(16,-8)

@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/one_way.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/editor/one_way.svg" id="2_3m2f5"]
+[ext_resource type="Script" path="res://scripts/editor_icon.gd" id="3_2psmp"]
+
+[sub_resource type="RectangleShape2D" id="Shape"]
+size = Vector2(16, 16)
+
+[node name="OneWayBlock" type="StaticBody2D" unique_id=1690227728]
+collision_mask = 6
+script = ExtResource("1")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=223020329]
+shape = SubResource("Shape")
+one_way_collision = true
+
+[node name="EditorIcon" type="Sprite2D" parent="." unique_id=718467492]
+texture = ExtResource("2_3m2f5")
+script = ExtResource("3_2psmp")

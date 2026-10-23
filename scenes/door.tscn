@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="Shader" path="res://shaders/surface.gdshader" id="1_uvdjg"]
+[ext_resource type="Script" path="res://scripts/door.gd" id="2_83dcw"]
+[ext_resource type="Texture2D" path="res://assets/editor/door.svg" id="3_la1wf"]
+[ext_resource type="Script" path="res://scripts/editor_icon.gd" id="4_18pbm"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_q5w8r"]
+resource_local_to_scene = true
+shader = ExtResource("1_uvdjg")
+shader_parameter/tint = null
+shader_parameter/energy = null
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_18pbm"]
+size = Vector2(16, 16)
+
+[node name="Door" type="StaticBody2D" unique_id=1148096654]
+material = SubResource("ShaderMaterial_q5w8r")
+collision_mask = 6
+script = ExtResource("2_83dcw")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=342678227]
+shape = SubResource("RectangleShape2D_18pbm")
+
+[node name="EditorIcon" type="Sprite2D" parent="." unique_id=1037851171]
+texture = ExtResource("3_la1wf")
+script = ExtResource("4_18pbm")

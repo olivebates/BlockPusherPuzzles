@@ -1,0 +1,11 @@
+[gd_scene load_steps=4 format=3]
+[ext_resource type="Script" path="res://scripts/rotator.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/editor/rotator_counterclockwise.svg" id="2"]
+[ext_resource type="Script" path="res://scripts/editor_icon.gd" id="3"]
+[node name="CounterclockwiseRotator" type="Node2D"]
+z_index = 4
+script = ExtResource("1")
+clockwise = false
+[node name="EditorIcon" type="Sprite2D" parent="."]
+texture = ExtResource("2")
+script = ExtResource("3")

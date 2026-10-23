@@ -1,0 +1,90 @@
+extends SceneTree
+var failures := 0
+func _initialize() -> void: call_deferred("run")
+func check(value: bool, message: String) -> void:
+	print(("PASS: " if value else "FAIL: ")+message)
+	if not value: failures+=1
+func frames(count: int) -> void:
+	for i in count: await physics_frame
+func object(kind: int, parent: Node, point: Vector2) -> Node2D:
+	var node: Node2D=load(LevelData.SCENES[kind]).instantiate()
+	node.position=point
+	parent.add_child(node)
+	return node
+func run() -> void:
+	create_timer(40,true).timeout.connect(func(): quit(99))
+	var game: Node2D=load("res://tools/test_world.gd").new().level()
+	for child in game.get_node("Objects").get_children(): child.free()
+	var objects := game.get_node("Objects")
+	var player: CharacterBody2D=object(1,objects,Vector2(56,313))
+	root.add_child(game)
+	current_scene=game
+	await frames(8)
+	player.set_physics_process(false)
+	var lift: CharacterBody2D=object(19,objects,Vector2(296,248))
+	var joined: CharacterBody2D=object(19,objects,Vector2(312,248))
+	lift.speed=120
+	var walls: TileMapLayer=game.get_node("Walls")
+	for x in [18,19]: walls.set_cell(Vector2i(x,10),0,Vector2i.ZERO)
+	await frames(4)
+	check(lift.leader==joined.leader and lift.members.size()==2,"Adjacent yellow elevator tiles fuse into one solid compound body")
+	player.position=Vector2(296,234)
+	player.force_update_transform()
+	player.set_physics_process(true)
+	await frames(100)
+	check(absf(lift.position.y-312)<0.25 and not lift.moving and absf(joined.position.y-lift.position.y)<0.01,"First step moves the fused elevator down until it reaches the floor")
+	check(absf(player.position.y-298)<0.4,"The descending elevator carries the player without a bounce")
+	check(player.safety.ground_history.size()<5,"Riding one moving elevator does not consume the 100-tile ground history")
+	await frames(10)
+	check(not lift.moving and absf(lift.position.y-312)<0.25,"Remaining on the elevator does not activate it repeatedly")
+	player.position=Vector2(56,313)
+	await frames(3)
+	player.position=Vector2(296,298)
+	player.force_update_transform()
+	await frames(140)
+	check(absf(lift.position.y-200)<0.25 and not lift.moving,"The next step moves up and stops one empty tile below the ceiling")
+	check(absf(player.position.y-186)<0.4,"The ascending elevator carries its player safely into the headroom")
+	player.position=Vector2(56,313)
+	var floor_lift: CharacterBody2D=object(19,objects,Vector2(456,312))
+	floor_lift.speed=120
+	walls.set_cell(Vector2i(28,10),0,Vector2i.ZERO)
+	await frames(3)
+	player.position=Vector2(456,298)
+	player.force_update_transform()
+	await frames(140)
+	check(absf(floor_lift.position.y-200)<0.25,"An elevator already blocked below starts by going up")
+	player.set_physics_process(false)
+	player.position=Vector2(56,313)
+	var vertical: CharacterBody2D=object(19,objects,Vector2(520,264))
+	var vertical_member: CharacterBody2D=object(19,objects,Vector2(520,280))
+	var diagonal: CharacterBody2D=object(19,objects,Vector2(536,296))
+	await frames(3)
+	check(vertical.leader==vertical_member.leader and vertical.members.size()==2 and diagonal.leader!=vertical.leader,"Elevators fuse vertically as well as horizontally, while diagonal neighbors stay separate")
+	var phase: StaticBody2D=object(20,objects,Vector2(616,296))
+	var phase_joined: StaticBody2D=object(20,objects,Vector2(632,296))
+	walls.set_cell(Vector2i(37,18),0,Vector2i.ZERO)
+	await frames(3)
+	check(not phase.edge_exposed(Vector2.RIGHT) and not phase_joined.edge_exposed(Vector2.LEFT) and not phase.edge_exposed(Vector2.LEFT) and phase.edge_exposed(Vector2.UP),"Dotted wall outlines hide shared edges against adjacent phase tiles and solid walls")
+	check(PuzzlePhysics.clear_at(player,phase.position,[player.get_rid()]),"The player can pass freely through dotted walls")
+	var box: CharacterBody2D=object(2,objects,Vector2(616,264))
+	await frames(40)
+	check(absf(box.position.y-280)<0.3,"Boxes treat the player-passable dotted wall as a solid floor")
+	var sphere: CharacterBody2D=object(6,objects,Vector2(680,296))
+	await frames(3)
+	sphere.touch(Vector2.LEFT)
+	await frames(45)
+	check(not sphere.sliding and sphere.position.x>=647.5,"Circles stop against dotted walls")
+	var progress := root.get_node("Progress")
+	progress.level=game
+	var saved: Dictionary=progress.snapshot()
+	var expected := lift.position
+	lift.position+=Vector2(0,32)
+	check(progress.apply_state(saved) and lift.position.distance_to(expected)<0.1,"Elevator position and travel state survive saved-progress restore")
+	var data := LevelData.decode(LevelData.encode(LevelData.capture(game)))
+	check(data.objects.any(func(item): return int(item[0])==19) and data.objects.any(func(item): return int(item[0])==20),"Both new objects survive compressed editor-level encoding")
+	check(LevelData.apply(game,data),"Levels containing fused elevators and dotted walls load successfully")
+	await frames(4)
+	current_scene=null
+	game.queue_free()
+	await process_frame
+	quit(failures)

@@ -1,0 +1,30 @@
+[gd_scene format=3 uid="uid://whtl2ynu5rmv"]
+
+[ext_resource type="Shader" uid="uid://eutpu06bue5k" path="res://shaders/surface.gdshader" id="1_0obic"]
+[ext_resource type="Script" uid="uid://dd4pktq05kl85" path="res://scripts/block.gd" id="2_t46rb"]
+[ext_resource type="Texture2D" uid="uid://bv7a0yl3u4b5f" path="res://assets/editor/block.svg" id="3_5vt1s"]
+[ext_resource type="Script" uid="uid://bkys8th502bmi" path="res://scripts/editor_icon.gd" id="4_yh5n5"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_e12w1"]
+resource_local_to_scene = true
+shader = ExtResource("1_0obic")
+shader_parameter/tint = Color(1, 1, 1, 1)
+shader_parameter/energy = 0.0
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_yh5n5"]
+size = Vector2(16, 16)
+
+[node name="PushBlock" type="CharacterBody2D" unique_id=520602817]
+material = SubResource("ShaderMaterial_e12w1")
+collision_layer = 4
+collision_mask = 7
+safe_margin = 0.0
+script = ExtResource("2_t46rb")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=436433622]
+shape = SubResource("RectangleShape2D_yh5n5")
+
+[node name="EditorIcon" type="Sprite2D" parent="." unique_id=2030798965]
+z_index = 20
+texture = ExtResource("3_5vt1s")
+script = ExtResource("4_yh5n5")

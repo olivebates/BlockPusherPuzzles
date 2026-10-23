@@ -1,0 +1,15 @@
+[gd_scene format=3 uid="uid://crmx8oqxi8cn5"]
+
+[ext_resource type="Script" uid="uid://ba4r5xjdr6vkn" path="res://scripts/lightning_emitter.gd" id="1"]
+[ext_resource type="Script" uid="uid://bkys8th502bmi" path="res://scripts/editor_icon.gd" id="2"]
+[ext_resource type="Texture2D" uid="uid://8w28tubi1po8" path="res://assets/editor/lightning.svg" id="3"]
+
+[node name="LightningEmitter" type="Node2D" unique_id=2137903311]
+z_index = 2
+script = ExtResource("1")
+
+[node name="EditorIcon" type="Sprite2D" parent="." unique_id=112195294]
+z_index = 20
+position = Vector2(-1, 0)
+texture = ExtResource("3")
+script = ExtResource("2")
