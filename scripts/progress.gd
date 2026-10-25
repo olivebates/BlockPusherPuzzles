@@ -14,6 +14,7 @@ var map_teleported := false
 var shortcut_keys := {}
 var delete_shortcut_latched := false
 func _input(event: InputEvent) -> void:
+	if OS.has_feature("web"): return
 	if not event is InputEventKey: return
 	var code: int=event.physical_keycode if event.physical_keycode else event.keycode
 	shortcut_keys[code]=event.pressed
@@ -75,6 +76,12 @@ func snapshot() -> Dictionary:
 	var data := {"v":1,"scene":level.scene_file_path,"time":Time.get_unix_time_from_system(),"player":vector(player.global_position),"dialogues":dialogues.duplicate(true),"dialogue":Dialogue.snapshot(),"blocks":[],"spheres":[],"collected":[],"indicators":[],"platforms":[],"rotators":[],"theme":[level.background_color.to_html(),level.tile_color.to_html()]}
 	data.map_tutorial={"stage":map_hint_stage,"opened":map_opened,"teleported":map_teleported}
 	data.ground_history=player.safety.save_history()
+	data.hue_shift=level.hue_shift
+	data.hue_cycling=level.hue_cycling
+	data.hue_reference=2
+	data.passed_doors=[]
+	for door in get_tree().get_nodes_in_group("doors")+get_tree().get_nodes_in_group("large_doors"):
+		if door.passed_through: data.passed_doors.append(object_key(door))
 	data.elevators=[]
 	for elevator in get_tree().get_nodes_in_group("elevators"):
 		if elevator.leader==elevator:
@@ -107,6 +114,10 @@ func snapshot() -> Dictionary:
 		data.rotators.append([object_key(rotator),rotator.cooldown])
 	return data
 func valid(data: Dictionary) -> bool:
+	if not data.get("hue_cycling",false) is bool: return false
+	if not data.get("passed_doors",[]) is Array: return false
+	for key in data.get("passed_doors",[]):
+		if not key is String: return false
 	if data.get("v")!=1 or not data.get("scene","") is String: return false
 	if not vector_valid(data.get("player")): return false
 	if not data.get("ground_history",[]) is Array or data.get("ground_history",[]).size()>100: return false
@@ -115,7 +126,9 @@ func valid(data: Dictionary) -> bool:
 	if not data.get("elevators",[]) is Array or data.get("elevators",[]).size()>10000: return false
 	for record in data.get("elevators",[]):
 		if not record is Dictionary or not record.get("key") is String or not vector_valid(record.get("p")): return false
-		if record.get("next") not in [-1,1] or record.get("direction") not in [-1,1]: return false
+		# JSON restores numeric fields as floats, including authored +/-1 directions.
+		for field in ["next","direction"]:
+			if not LevelData.number(record.get(field)) or absf(float(record[field]))!=1.0: return false
 		if not record.get("moving") is bool or not record.get("on") is bool or not vector_valid(record.get("velocity")): return false
 	if not data.get("dialogues",{}) is Dictionary or not data.get("dialogue",{}) is Dictionary: return false
 	if not data.get("map_tutorial",{}) is Dictionary: return false
@@ -193,6 +206,10 @@ func apply_state(data: Dictionary) -> bool:
 	for pickup in get_tree().get_nodes_in_group("collectibles"): pickup.set_collected(object_key(pickup) in data.collected)
 	for indicator in get_tree().get_nodes_in_group("collectible_indicators"): indicator.lit=object_key(indicator) in data.indicators
 	for door in get_tree().get_nodes_in_group("large_doors"): door.restore_state()
+	for door in get_tree().get_nodes_in_group("doors")+get_tree().get_nodes_in_group("large_doors"):
+		door.passed_through=object_key(door) in data.get("passed_doors",[])
+		door.passage.entry_side=0
+		door.passage.entered=false
 	for platform in get_tree().get_nodes_in_group("recall_platforms"): platform.activated=object_key(platform) in data.platforms
 	for entry in data.rotators:
 		if not entry is Array or entry.size()!=2 or not nodes.has(entry[0]): continue
@@ -201,8 +218,19 @@ func apply_state(data: Dictionary) -> bool:
 		rotator.countdown=rotator.cooldown
 	if data.get("theme") is Array and data.theme.size()==2:
 		if level.theme_tween and level.theme_tween.is_valid(): level.theme_tween.kill()
+		level.stop_hue_cycle()
 		level.background_color=Color.html(data.theme[0])
 		level.tile_color=Color.html(data.theme[1])
+		level.hue_shift=float(data.get("hue_shift",0.0))
+		# Older saves used red as the hue origin and could restore the temporary
+		# gray palette. Keep object progress while adopting the teal baseline.
+		if int(data.get("hue_reference",1))<2:
+			level.background_color=HuePalette.DEFAULT_BACKGROUND
+			level.tile_color=HuePalette.DEFAULT_TILES
+			if not is_zero_approx(level.hue_shift): level.hue_shift=wrapf(level.hue_shift-HuePalette.DEFAULT_COLOR.h,-0.5,0.5)
+		level.hue_palette.reset(level.hue_shift)
+		if data.get("hue_cycling",false): level.start_hue_cycle()
+		level.apply_theme()
 	var player := get_tree().get_first_node_in_group("player") as CharacterBody2D
 	player.global_position=point(data.player)
 	player.velocity=Vector2.ZERO
@@ -308,5 +336,5 @@ func _notification(what: int) -> void:
 	if what==NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 		shortcut_keys.clear()
 		delete_shortcut_latched=false
-	if what in [NOTIFICATION_WM_CLOSE_REQUEST,NOTIFICATION_APPLICATION_FOCUS_OUT]:
+	if what in [NOTIFICATION_WM_CLOSE_REQUEST,NOTIFICATION_APPLICATION_FOCUS_OUT,NOTIFICATION_WM_WINDOW_FOCUS_OUT]:
 		if enabled and is_instance_valid(level) and not restoring: save_now()

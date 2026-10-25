@@ -130,7 +130,7 @@ func display_line() -> void:
 		portrait.material=mat
 func emphasize(text: String) -> String:
 	var regex := RegEx.new()
-	regex.compile("(?i)\\b(seriously|guys|wait|theory|giant door|no idea|tough|stuck)\\b")
+	regex.compile("(?i)\\b(seriously|wait|theory|giant door|no idea|tough|stuck)\\b")
 	var result := ""
 	var offset := 0
 	for match_word in regex.search_all(text):

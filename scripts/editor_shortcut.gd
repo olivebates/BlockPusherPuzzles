@@ -2,6 +2,7 @@ extends Node
 var held := {}
 var latched := false
 func _input(event: InputEvent) -> void:
+	if OS.has_feature("web"): return
 	if not event is InputEventKey: return
 	var code: int = event.physical_keycode if event.physical_keycode else event.keycode
 	held[code] = event.pressed
@@ -12,6 +13,7 @@ func _input(event: InputEvent) -> void:
 		call_deferred("open_editor")
 	elif not chord: latched = false
 func open_editor() -> void:
+	if OS.has_feature("web"): return
 	get_tree().paused = false
 	get_tree().change_scene_to_file("res://scenes/level_editor.tscn")
 func _notification(what: int) -> void:

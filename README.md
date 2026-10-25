@@ -29,6 +29,10 @@ Press **Space** to switch between Build and Playtest, or use the mode button. Ev
 
 ## Settings
 
+Color changers expose **Cycle Hue** in the Godot Inspector and the in-game
+editor. When enabled, touching the changer starts a continuous 12-second hue
+loop. Touch a changer with Cycle Hue disabled to return to a fixed color.
+
 The **gear button at the top right** opens Music and Sound effects sliders and keybind controls. The menu pauses gameplay and restores its previous pause state when closed. Sound effects use the `SFX` bus; a separate `Music` bus is ready for future tracks. Volumes are written immediately to `user://audio.cfg` and restored when the application starts, including after a complete exit.
 
 Each gameplay action supports **up to three keyboard keys or mouse buttons**. Click a slot, then press its replacement. Delete/Backspace clears the slot; Escape cancels capture. The reset button restores defaults. Keybinds save immediately to `user://keybinds.cfg` and remain intact across level changes and application sessions. Gameplay has no persistent HUD text; contextual recall prompts use the first assigned key, so rebinding Q or R updates their displayed prompts.
@@ -36,6 +40,16 @@ Each gameplay action supports **up to three keyboard keys or mouse buttons**. Cl
 Every reusable object scene now includes an **EditorIcon** sprite using a generated SVG identification icon from `assets/editor/`. These sprites appear in the Godot editor and as palette/build previews; they stay hidden during normal gameplay. `tools/install_editor_icons.gd` can reinstall them if you replace the object scenes. The block's small white inner rectangle appears only while settled on a matching key tile.
 
 ## Build your level
+
+The **Fireworks area** palette object creates a dark gray backdrop and launches
+fireworks from the bottom of the screen while the player is inside. Place the
+separate **Completion text** object over it for the completion message and clickable
+Discord invite. Edit the wording only in `scripts/ending_message.gd`: its named
+title, victory, request, Discord URL, and closing fields keep their formatting
+regardless of wording or line breaks. Scene overrides and saved levels no longer
+store extra copies of this message. Both objects expose their dimensions in the Godot Inspector and
+survive custom level saves. The sixteen-pixel support bar along the bottom links to
+Discord and [Donate](https://ko-fi.com/snugglefox).
 
 Open `scenes/main.tscn`. Select **Walls** and use the TileMap editor to paint the dark gray solid tile. Its TileSet is `assets/walls.tres`, including collision. Drag any reusable object scene from `scenes/` into **Objects**, including `one_way_block.tscn` and `color_trigger.tscn`. The included demo is editable; nothing overwrites your level at runtime.
 

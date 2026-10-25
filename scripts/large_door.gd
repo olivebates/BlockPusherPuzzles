@@ -2,6 +2,8 @@
 extends StaticBody2D
 @export_range(1,100) var indicator_radius_tiles := 20
 var opened := false
+var passed_through := false
+var passage := preload("res://scripts/door_passage.gd").new()
 var openness := 0.0
 func _ready() -> void:
 	if not Engine.is_editor_hint(): add_to_group("large_doors")
@@ -36,6 +38,7 @@ func _physics_process(delta: float) -> void:
 		Juice.sound("open" if opened else "close",0.7)
 		Juice.impact(0.7,global_position)
 	openness=move_toward(openness,1.0 if opened else 0.0,delta/0.45)
+	if not passed_through: passed_through=passage.update(self)
 	queue_redraw()
 func _draw() -> void:
 	var gold := Color("c6a765")

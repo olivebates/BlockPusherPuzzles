@@ -40,7 +40,7 @@ func _physics_process(delta: float) -> void:
 		buffered=0
 		coyote=0
 		return
-	var flying := Input.is_physical_key_pressed(KEY_SHIFT)
+	var flying := not OS.has_feature("web") and Input.is_physical_key_pressed(KEY_SHIFT)
 	if flying != noclip:
 		if flying:
 			solid_layer = collision_layer

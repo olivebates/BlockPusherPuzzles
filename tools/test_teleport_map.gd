@@ -66,7 +66,9 @@ func run() -> void:
 	check(panel.bg_color==game.background_color and panel.border_color==game.tile_color and panel.border_width_left==1,"The map panel uses the current game background and tile colors")
 	var map_image: Image=map.texture.get_image()
 	var wall_pixel: Vector2i=map.world_tile(walls.to_global(walls.map_to_local(Vector2i(0,20))))-map.tile_bounds.position
-	check(map_image.get_pixelv(wall_pixel).is_equal_approx(game.tile_color) and map_image.get_pixel(0,0).is_equal_approx(game.background_color),"Map pixels match the game background and tiles")
+	var rendered_wall := map_image.get_pixelv(wall_pixel)
+	var rendered_background := map_image.get_pixel(0,0)
+	check(Vector3(rendered_wall.r-game.tile_color.r,rendered_wall.g-game.tile_color.g,rendered_wall.b-game.tile_color.b).length()<0.007 and Vector3(rendered_background.r-game.background_color.r,rendered_background.g-game.background_color.g,rendered_background.b-game.background_color.b).length()<0.007,"Map pixels match the game background and tiles at image byte precision")
 	check(map_image.get_pixelv(Vector2i(60,20)-map.tile_bounds.position)==Color.BLACK,"Unseen tiles between explored areas remain black")
 	var old_pulse: float=map.pulse
 	map._process(0.2)

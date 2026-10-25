@@ -1,8 +1,8 @@
 class_name LevelData
 extends RefCounted
-const SCENES = ["", "res://scenes/player.tscn", "res://scenes/push_block.tscn", "res://scenes/matching_pad.tscn", "res://scenes/door.tscn", "res://scenes/symbol_portal.tscn", "res://scenes/sliding_sphere.tscn", "res://scenes/recall_platform.tscn", "res://scenes/one_way_block.tscn", "res://scenes/color_trigger.tscn", "res://scenes/rotator_clockwise.tscn", "res://scenes/rotator_counterclockwise.tscn", "res://scenes/large_door.tscn", "res://scenes/collectible.tscn", "res://scenes/indicator.tscn", "res://scenes/npc_fox.tscn", "res://scenes/dialogue_trigger.tscn", "res://scenes/map_trigger.tscn", "res://scenes/lightning_emitter.tscn", "res://scenes/elevator_block.tscn", "res://scenes/phase_wall.tscn"]
-const SCRIPTS = ["", "res://scripts/player.gd", "res://scripts/block.gd", "res://scripts/pad.gd", "res://scripts/door.gd", "res://scripts/symbol_portal.gd", "res://scripts/sphere.gd", "res://scripts/recall_platform.gd", "res://scripts/one_way.gd", "res://scripts/color_trigger.gd", "res://scripts/rotator.gd", "res://scripts/rotator.gd", "res://scripts/large_door.gd", "res://scripts/collectible.gd", "res://scripts/indicator.gd", "res://scripts/npc_fox.gd", "res://scripts/dialogue_trigger.gd", "res://scripts/map_trigger.gd", "res://scripts/lightning_emitter.gd", "res://scripts/elevator.gd", "res://scripts/phase_wall.gd"]
-const ICONS = ["wall", "player", "block", "key", "door", "portal", "sphere", "platform", "one_way", "color_trigger", "rotator_clockwise", "rotator_counterclockwise", "large_door", "collectible", "indicator", "npc_fox", "dialogue_trigger", "map_trigger", "lightning", "elevator", "phase_wall"]
+const SCENES = ["", "res://scenes/player.tscn", "res://scenes/push_block.tscn", "res://scenes/matching_pad.tscn", "res://scenes/door.tscn", "res://scenes/symbol_portal.tscn", "res://scenes/sliding_sphere.tscn", "res://scenes/recall_platform.tscn", "res://scenes/one_way_block.tscn", "res://scenes/color_trigger.tscn", "res://scenes/rotator_clockwise.tscn", "res://scenes/rotator_counterclockwise.tscn", "res://scenes/large_door.tscn", "res://scenes/collectible.tscn", "res://scenes/indicator.tscn", "res://scenes/npc_fox.tscn", "res://scenes/dialogue_trigger.tscn", "res://scenes/map_trigger.tscn", "res://scenes/lightning_emitter.tscn", "res://scenes/elevator_block.tscn", "res://scenes/phase_wall.tscn", "res://scenes/celebration_area.tscn", "res://scenes/completion_text.tscn"]
+const SCRIPTS = ["", "res://scripts/player.gd", "res://scripts/block.gd", "res://scripts/pad.gd", "res://scripts/door.gd", "res://scripts/symbol_portal.gd", "res://scripts/sphere.gd", "res://scripts/recall_platform.gd", "res://scripts/one_way.gd", "res://scripts/color_trigger.gd", "res://scripts/rotator.gd", "res://scripts/rotator.gd", "res://scripts/large_door.gd", "res://scripts/collectible.gd", "res://scripts/indicator.gd", "res://scripts/npc_fox.gd", "res://scripts/dialogue_trigger.gd", "res://scripts/map_trigger.gd", "res://scripts/lightning_emitter.gd", "res://scripts/elevator.gd", "res://scripts/phase_wall.gd", "res://scripts/celebration_area.gd", "res://scripts/completion_text.gd"]
+const ICONS = ["wall", "player", "block", "key", "door", "portal", "sphere", "platform", "one_way", "color_trigger", "rotator_clockwise", "rotator_counterclockwise", "large_door", "collectible", "indicator", "npc_fox", "dialogue_trigger", "map_trigger", "lightning", "elevator", "phase_wall", "celebration_area", "completion_text"]
 const MAX_BYTES = 16777216
 static func platform_position(data: Dictionary, point: Vector2) -> Vector2:
 	var floor_y := INF
@@ -39,9 +39,11 @@ static func capture(level: Node) -> Dictionary:
 		if kind == 16: entry.append_array([node.dialogue_id,node.text])
 		if kind == 18: entry.append_array([node.direction,node.max_length_tiles,node.beam_color.to_html(),node.enabled])
 		if kind == 19: entry.append(node.speed)
+		if kind == 21: entry.append_array([node.size.x,node.size.y])
+		if kind == 22: entry.append_array([node.size.x,node.size.y,node.font_size])
 		if kind == 2: entry.append_array([node.push_delay,node.slide_duration])
 		if kind == 6: entry.append_array([node.slide_speed,node.charge_time])
-		if kind == 9: entry.append_array([node.hex_color,node.color.to_html(),node.background_color.to_html(),node.tile_color.to_html()])
+		if kind == 9: entry.append_array([node.hex_color,node.color.to_html(),node.cycle_hue])
 		data.objects.append(entry)
 		data.grid[0] = maxi(data.grid[0],int(ceil(point.x/16)))
 		data.grid[1] = maxi(data.grid[1],int(ceil(point.y/16)))
@@ -61,13 +63,21 @@ static func valid(data: Variant, require_player := true) -> bool:
 	for item in data.objects:
 		if not item is Array or item.size()<3 or not whole(item[0]): return false
 		var kind := int(item[0])
-		var sizes := [0,3,6,5,5,4,5,3,3,5,3,3,4,4,3,5,5,3,7,4,3]
+		var sizes := [0,3,6,5,5,4,5,3,3,6,3,3,4,4,3,5,5,3,7,4,3,5,6]
 		if kind<1 or kind>=SCENES.size(): return false
-		if item.size()!=sizes[kind] and not (kind==9 and item.size()==7): return false
+		if item.size()!=sizes[kind] and not (kind==9 and item.size() in [5,7]) and not (kind==22 and item.size()==7): return false
 		if not number(item[1]) or not number(item[2]) or absf(item[1])>131072 or absf(item[2])>131072: return false
 		if kind==1: players += 1
 		if kind==12 and (not whole(item[3]) or item[3]<1 or item[3]>100): return false
 		if kind==19 and (not number(item[3]) or item[3]<8 or item[3]>240): return false
+		if kind in [21,22]:
+			var offset := 4 if kind==22 and item.size()==7 else 3
+			for index in [offset,offset+1]:
+				if not number(item[index]) or item[index]<16 or item[index]>8192: return false
+		if kind==22:
+			if item.size()==7 and (not item[3] is String or item[3].length()>4096): return false
+			var font_index: int=item.size()-1
+			if not whole(item[font_index]) or item[font_index]<6 or item[font_index]>48: return false
 		if kind==18:
 			if not whole(item[3]) or item[3]<0 or item[3]>1: return false
 			if not whole(item[4]) or item[4]<1 or item[4]>512: return false
@@ -82,6 +92,7 @@ static func valid(data: Variant, require_player := true) -> bool:
 		if kind==2 and (not number(item[4]) or not number(item[5]) or item[4]<0.01 or item[5]<0.01): return false
 		if kind==6 and (not number(item[3]) or not number(item[4]) or item[3]<=0 or item[4]<0.01): return false
 		if kind==9 and (not item[3] is String or item[3].length()>32 or not item[4] is String or not Color.html_is_valid(item[4])): return false
+		if kind==9 and item.size()==6 and not item[5] is bool: return false
 		if kind==9 and item.size()==7:
 			for index in [5,6]:
 				if not item[index] is String or not Color.html_is_valid(item[index]): return false
@@ -177,6 +188,12 @@ static func apply(level: Node, data: Dictionary, preserve_player := false) -> bo
 			node.beam_color=Color.html(item[5])
 			node.enabled=item[6]
 		if kind==19: node.speed=float(item[3])
+		if kind==21: node.size=Vector2(item[3],item[4])
+		if kind==22:
+			# Old files may contain message copies; always use the central message now.
+			var offset := 4 if item.size()==7 else 3
+			node.size=Vector2(item[offset],item[offset+1])
+			node.font_size=int(item[-1])
 		if kind==2:
 			node.push_delay = item[4]
 			node.slide_duration = item[5]
@@ -186,9 +203,7 @@ static func apply(level: Node, data: Dictionary, preserve_player := false) -> bo
 		if kind==9:
 			node.hex_color = item[3]
 			node.color = Color.html(item[4])
-			if item.size()==7:
-				node.background_color = Color.html(item[5])
-				node.tile_color = Color.html(item[6])
+			node.cycle_hue = item[5] if item.size()==6 else false
 		objects.add_child(node)
 	for camera in level.get_tree().get_nodes_in_group("game_camera"):
 		camera.player = level.get_tree().get_first_node_in_group("player")

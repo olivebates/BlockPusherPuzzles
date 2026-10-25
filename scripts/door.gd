@@ -11,6 +11,8 @@ var height_tiles := 1:
 		queue_redraw()
 var openness := 0.0
 var opened := false
+var passed_through := false
+var passage := preload("res://scripts/door_passage.gd").new()
 func _ready() -> void:
 	if Engine.is_editor_hint(): return
 	add_to_group("doors")
@@ -37,6 +39,7 @@ func _physics_process(delta: float) -> void:
 		Juice.burst(global_position+Vector2(0,-height_tiles*8+8),Color("dcecf3"),12)
 		Juice.impact(0.65,global_position)
 	openness = move_toward(openness,1.0 if opened else 0.0,delta*4)
+	if not passed_through: passed_through=passage.update(self)
 	if material: material.set_shader_parameter("energy",1-openness)
 	queue_redraw()
 func doorway_occupied() -> bool:

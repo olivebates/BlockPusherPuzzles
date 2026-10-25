@@ -252,18 +252,27 @@ func _physics_process(delta: float) -> void:
 		break
 	if not contact_seen: failed_stamp=""
 func _draw() -> void:
+	draw_shape(self)
+	if cooldown>0:
+		var font := ThemeDB.fallback_font
+		var font_size := 12
+		var text := str(cooldown)
+		var width := font.get_string_size(text,HORIZONTAL_ALIGNMENT_LEFT,-1,font_size).x
+		var baseline := (font.get_ascent(font_size)-font.get_descent(font_size))/2
+		draw_string(font,Vector2(-width/2,baseline),text,HORIZONTAL_ALIGNMENT_LEFT,-1,font_size,Color(1,1,1,0.7))
+func draw_shape(canvas: CanvasItem) -> void:
 	var alpha := 0.28 if cooldown>0 or countdown>0.001 else 1.0
 	var color := Color(1,0.83,0.2,alpha)
-	draw_rect(Rect2(-7.5,-7.5,15,15),color,false,1)
+	canvas.draw_rect(Rect2(-7.5,-7.5,15,15),color,false,1)
 	var points := PackedVector2Array()
 	var direction := 1.0 if clockwise else -1.0
 	for i in 29: points.append(Vector2.from_angle(-PI/2+direction*(0.25+float(i)/28*(TAU-0.8)))*5.5)
-	draw_polyline(points,color,1.2,true)
+	canvas.draw_polyline(points,color,1.2,true)
 	var tip := points[-1]
 	var tangent := Vector2.from_angle(-PI/2+direction*(TAU-0.55)+direction*PI/2)
-	draw_colored_polygon(PackedVector2Array([tip+tangent*1.5,tip-tangent*2+tangent.orthogonal()*2,tip-tangent*2-tangent.orthogonal()*2]),color)
-	if countdown>0.001: draw_arc(Vector2.ZERO,6.8,-PI/2,-PI/2+TAU*countdown/3,48,Color(1,0.83,0.2,0.7),1,true)
+	canvas.draw_colored_polygon(PackedVector2Array([tip+tangent*1.5,tip-tangent*2+tangent.orthogonal()*2,tip-tangent*2-tangent.orthogonal()*2]),color)
+	if countdown>0.001: canvas.draw_arc(Vector2.ZERO,6.8,-PI/2,-PI/2+TAU*countdown/3,48,Color(1,0.83,0.2,0.7),1,true)
 	if failure_flash>0:
 		var red := Color(1,0.12,0.15,minf(1,failure_flash*4))
-		draw_line(Vector2(-4,-4),Vector2(4,4),red,2)
-		draw_line(Vector2(4,-4),Vector2(-4,4),red,2)
+		canvas.draw_line(Vector2(-4,-4),Vector2(4,4),red,2)
+		canvas.draw_line(Vector2(4,-4),Vector2(-4,4),red,2)

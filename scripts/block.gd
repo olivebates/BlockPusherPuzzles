@@ -219,7 +219,9 @@ func _physics_process(delta: float) -> void:
 		global_position.x = resting_x
 		if grounded:
 			var tile_y := home.y+roundf((global_position.y-home.y)/16)*16
-			if absf(global_position.y-tile_y)<0.2: global_position.y = tile_y
+			# Keep the exact support height. Snapping a fractional spawn offset
+			# back above the floor can drop grounded contact and reset push charge.
+			if absf(global_position.y-tile_y)<BlockFall.EPSILON: global_position.y = tile_y
 		if (grounded or supported_by_player) and not was_floor and fall_speed > 40:
 			Juice.sound("land",0.8)
 			Juice.impact(0.8,global_position)

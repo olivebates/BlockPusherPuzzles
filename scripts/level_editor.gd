@@ -10,6 +10,7 @@ var lightning_direction := 0
 var link_id := "A"
 var trigger_hex := ""
 var trigger_color := Color("89b9d1")
+var trigger_cycle_hue := false
 var trigger_background := Color(0.6,0.6,0.6,1)
 var trigger_tiles := Color(0.2,0.2,0.2,1)
 var required := 1
@@ -93,7 +94,7 @@ func make_ui() -> void:
 	rows.add_child(scroll)
 	var palette := HBoxContainer.new()
 	scroll.add_child(palette)
-	var names := ["Wall","Player","Block","Key tile","Door","Portal","Sphere","Platform","One-way","Theme","Rotate CW","Rotate CCW","Large door","Pickup","Indicator","Sunny","Dialogue","Map hint","Lightning","Elevator","Phase wall","Erase"]
+	var names := ["Wall","Player","Block","Key tile","Door","Portal","Sphere","Platform","One-way","Theme","Rotate CW","Rotate CCW","Large door","Pickup","Indicator","Sunny","Dialogue","Map hint","Lightning","Elevator","Phase wall","Fireworks area","Completion text","Erase"]
 	for i in names.size():
 		var item := button(names[i],palette,func(): select_item(i))
 		item.toggle_mode = true
@@ -141,6 +142,10 @@ func make_ui() -> void:
 		props.add_child(check)
 	var theme_props := HBoxContainer.new()
 	rows.add_child(theme_props)
+	var cycle := CheckBox.new()
+	cycle.text="Cycle hue"
+	cycle.toggled.connect(func(value: bool): trigger_cycle_hue=value)
+	theme_props.add_child(cycle)
 	label(" Theme hex ",theme_props)
 	var hex_edit := LineEdit.new()
 	hex_edit.placeholder_text = "#RRGGBB (optional)"
@@ -235,6 +240,7 @@ func toggle_mode() -> void:
 	if building: start_play()
 	else: enter_build()
 func _input(event: InputEvent) -> void:
+	if OS.has_feature("web"): return
 	if Dialogue.active or level.get_node("TeleportMap").active: return
 	if event is InputEventKey:
 		var code: int = event.physical_keycode if event.physical_keycode!=0 else event.keycode
@@ -308,13 +314,15 @@ func paint(point: Vector2, erase := false) -> void:
 		if selected==4: entry.append_array([required,link_id])
 		if selected==5: entry.append(selected_symbol)
 		if selected==6: entry.append_array([150.0,0.2])
-		if selected==9: entry.append_array([trigger_hex,trigger_color.to_html(),trigger_background.to_html(),trigger_tiles.to_html()])
+		if selected==9: entry.append_array([trigger_hex,trigger_color.to_html(),trigger_cycle_hue])
 		if selected==12: entry.append(20)
 		if selected==13: entry.append("")
 		if selected==15: entry.append_array([StoryLines.NPC,""])
 		if selected==16: entry.append_array(["","Whoa, this one looks tough!"])
 		if selected==18: entry.append_array([lightning_direction,128,"8adfff",true])
 		if selected==19: entry.append(48.0)
+		if selected==21: entry.append_array([512.0,256.0])
+		if selected==22: entry.append_array([448.0,192.0,12])
 		data.objects.append(entry)
 	queue_redraw()
 func open_file(save: bool) -> void:
@@ -372,6 +380,8 @@ func _draw() -> void:
 		for key in data.objects:
 			if int(key[0])==3 and key[4]==door[4] and int(door[3]) & (1<<int(key[3])):
 				DottedLinks.draw(self,Vector2(key[1],key[2]),Vector2(door[1],door[2]))
+	for item in data.objects:
+		if int(item[0])==21: draw_rect(Rect2(Vector2(item[1],item[2])-Vector2(item[3],item[4])/2,Vector2(item[3],item[4])),Color("252525"))
 	for tile in data.tiles: draw_texture_rect(textures[0],Rect2(tile[0]*16,tile[1]*16,16,16),false)
 	for item in data.objects:
 		var color := Color.WHITE

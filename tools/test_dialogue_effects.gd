@@ -21,6 +21,7 @@ func run() -> void:
 	current_scene=game
 	await frames(5)
 	var dialogue := root.get_node("Dialogue")
+	check(dialogue.emphasize("Haha, funny guys.")=="Haha, funny guys." and dialogue.emphasize("Guys?")=="Guys?","The opening dialogue leaves guys uncolored")
 	var juice := root.get_node("Juice")
 	var player: CharacterBody2D=get_first_node_in_group("player")
 	var chatter: Array[String]=[]

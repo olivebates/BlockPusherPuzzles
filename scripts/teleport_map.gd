@@ -1,12 +1,16 @@
 extends CanvasLayer
 const PANEL_COLOR := Color("26080e")
 const YELLOW := Color("ffd433")
+const ORANGE := Color("ff922e")
+const PLAYER_RED := Color("ff2525")
 var active := false
 var backdrop: ColorRect
 var panel: Panel
 var title: Label
 var footer: Label
 var view: Control
+var marker_layer: CanvasLayer
+var marker_view: Control
 var texture: ImageTexture
 var tile_bounds := Rect2i()
 var platforms: Array[Node2D]=[]
@@ -80,6 +84,9 @@ func update_theme() -> void:
 class MapView extends Control:
 	var map: CanvasLayer
 	func _draw() -> void: map.draw_map(self)
+class MarkerView extends Control:
+	var map: CanvasLayer
+	func _draw() -> void: map.draw_markers(self)
 func _ready() -> void:
 	layer=90
 	process_mode=Node.PROCESS_MODE_ALWAYS
@@ -127,6 +134,16 @@ func _ready() -> void:
 	view.offset_right=-18
 	view.offset_bottom=-46
 	panel.add_child(view)
+	# Semantic marker colors stay recognizable through every world hue change.
+	marker_layer=CanvasLayer.new()
+	marker_layer.layer=1001
+	add_child(marker_layer)
+	marker_view=MarkerView.new()
+	marker_view.map=self
+	marker_view.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	marker_view.clip_contents=true
+	marker_layer.add_child(marker_view)
+	marker_layer.hide()
 	hide()
 func world_tile(point: Vector2) -> Vector2i: return Vector2i(floor(point/16))
 func rebuild_map() -> bool:
@@ -161,7 +178,7 @@ func rebuild_map() -> bool:
 	for cell in walls.get_used_cells():
 		var pixel := world_tile(walls.to_global(walls.map_to_local(cell)))-tile_bounds.position
 		if explored.has(pixel+tile_bounds.position): image.set_pixelv(pixel,map_tiles)
-	for group in ["one_way_blocks","doors","large_doors"]:
+	for group in ["one_way_blocks"]:
 		for node in get_tree().get_nodes_in_group(group):
 			for collider in PuzzlePhysics.colliders(node):
 				var rect := collider.global_transform*collider.shape.get_rect()
@@ -195,12 +212,17 @@ func open_map() -> bool:
 	get_tree().paused=true
 	Progress.map_opened=true
 	show()
+	marker_layer.show()
+	marker_view.position=view.get_global_rect().position
+	marker_view.size=view.size
+	marker_view.queue_redraw()
 	view.queue_redraw()
 	return true
 func close_map(teleported := false) -> void:
 	if not active: return
 	active=false
 	hide()
+	marker_layer.hide()
 	if teleported:
 		Progress.map_teleported=true
 		Progress.map_hint_stage=3
@@ -270,6 +292,9 @@ func _process(delta: float) -> void:
 	if map_background!=get_parent().background_color or map_tiles!=get_parent().tile_color: rebuild_map()
 	failure=maxf(0,failure-delta)
 	view.queue_redraw()
+	marker_view.position=view.get_global_rect().position
+	marker_view.size=view.size
+	marker_view.queue_redraw()
 func image_rect(size: Vector2) -> Rect2:
 	var dimensions := Vector2(tile_bounds.size)
 	var scale := minf(size.x/dimensions.x,size.y/dimensions.y)
@@ -287,22 +312,49 @@ func draw_map(canvas: Control) -> void:
 		for node in get_tree().get_nodes_in_group(group):
 			if not explored.has(world_tile(node.global_position)): continue
 			if group=="collectibles" and node.collected: continue
-			var color := Color.WHITE if group in ["spheres","phase_walls"] else Color("ffe38b") if group in ["collectibles","elevators"] else PuzzlePalette.color_for(node.block_color)
+			var color := map_tiles if group in ["blocks","spheres"] else Color.WHITE if group=="phase_walls" else Color("ffe38b")
 			var point := marker(node.global_position,rect)
 			if not rect.has_point(point): continue
-			if group in ["blocks","elevators","phase_walls"]: canvas.draw_rect(Rect2(point-Vector2.ONE*unit/2,Vector2.ONE*unit),color,group!="phase_walls",1)
+			if group in ["blocks","elevators","phase_walls"]: canvas.draw_rect(Rect2(point-Vector2.ONE*unit/2,Vector2.ONE*unit),color,group!="phase_walls",1 if group=="phase_walls" else -1)
 			else: canvas.draw_circle(point,unit*0.4,color)
+func draw_markers(canvas: Control) -> void:
+	if not active or not texture: return
+	var rect := image_rect(canvas.size)
+	var unit := rect.size.x/tile_bounds.size.x
+	for group in ["doors","large_doors"]:
+		for door in get_tree().get_nodes_in_group(group):
+			var collider: CollisionShape2D=door.get_node("CollisionShape2D")
+			# Keep the authored doorway visible even while its collision is disabled.
+			var bounds := collider.global_transform*collider.shape.get_rect()
+			var first := world_tile(bounds.position+Vector2(0.1,0.1))
+			var end := world_tile(bounds.end-Vector2(0.1,0.1))
+			for x in range(first.x,end.x+1):
+				for y in range(first.y,end.y+1):
+					var cell := Vector2i(x,y)
+					if not explored.has(cell) or door.passed_through: continue
+					var point := marker(Vector2(cell*16)+Vector2(8,8),rect)
+					var square := Rect2(point-Vector2.ONE*unit/2,Vector2.ONE*unit)
+					if group=="large_doors" and door.opened:
+						for spread in [8.0,5.0,2.0]:
+							canvas.draw_rect(square.grow(spread),Color(ORANGE,(0.045+0.025*sin(pulse))*(9-spread)/3))
+					canvas.draw_rect(square,ORANGE)
+	for portal in get_tree().get_nodes_in_group("symbol_portals"):
+		if not explored.has(world_tile(portal.global_position)): continue
+		var point := marker(portal.global_position,rect)
+		canvas.draw_rect(Rect2(point-Vector2.ONE*maxf(2,unit*0.35),Vector2.ONE*maxf(4,unit*0.7)),YELLOW,false,1.5)
 	for platform in platforms:
 		if not is_instance_valid(platform): continue
 		if not explored.has(world_tile(platform.global_position)): continue
 		var point := marker(platform.global_position,rect)
-		canvas.draw_circle(point,3,Color("d6dce5") if platform.activated else Color("61494d"))
+		canvas.draw_circle(point,3,YELLOW if platform.activated else Color(YELLOW,0.45))
 		var radius := 6.0+sin(pulse)*1.2
 		if platform.activated and platform!=selected:
-			canvas.draw_arc(point,radius,0,TAU,32,Color(0.84,0.86,0.90,0.5),1,true)
+			canvas.draw_arc(point,radius,0,TAU,32,Color(YELLOW,0.5),1,true)
 		if platform==selected:
 			canvas.draw_arc(point,radius,0,TAU,32,Color("ff4444") if failure>0 else YELLOW,1,true)
 	var player := get_tree().get_first_node_in_group("player") as Node2D
 	if player:
 		var point := marker(player.global_position,rect)
-		if rect.has_point(point): canvas.draw_circle(point,2,Color("ff7767"))
+		if rect.has_point(point):
+			canvas.draw_circle(point,9,Color(PLAYER_RED,0.18))
+			canvas.draw_circle(point,6,PLAYER_RED)

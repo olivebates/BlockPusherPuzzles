@@ -1,13 +1,11 @@
 @tool
 extends Area2D
-## Base colors before the selected hue is applied. A white tint preserves these exactly.
-@export var background_color := Color(0.6,0.6,0.6,1)
-@export var tile_color := Color(0.2,0.2,0.2,1)
+@export var cycle_hue := false
 @export var hex_color := "":
 	set(value):
 		hex_color = value
 		queue_redraw()
-@export var color := Color("89b9d1"):
+@export var color := HuePalette.DEFAULT_COLOR:
 	set(value):
 		color = value
 		queue_redraw()
@@ -22,7 +20,7 @@ func _ready() -> void:
 func touched(body: Node) -> void:
 	if body.is_in_group("player"):
 		var scene := get_tree().current_scene
-		if scene and scene.has_method("change_theme"): scene.change_theme(selected_color(),background_color,tile_color)
+		if scene and scene.has_method("change_theme"): scene.change_theme(selected_color(),cycle_hue)
 func contains_player(player: Node2D) -> bool:
 	var collider := get_node("CollisionShape2D") as CollisionShape2D
 	return (collider.global_transform*collider.shape.get_rect()).intersects(Rect2(player.global_position-Vector2(5,7),Vector2(10,14)))

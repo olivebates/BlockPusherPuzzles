@@ -56,7 +56,7 @@ func run() -> void:
 	editor.last_cell=Vector2i(-999999,-999999)
 	editor.paint(Vector2(452,220))
 	var theme_entry: Array=LevelData.decode(LevelData.encode(editor.data)).objects.back()
-	check(theme_entry==[9,452.0,220.0,"#ffaa55",Color.GREEN.to_html(),editor.trigger_background.to_html(),editor.trigger_tiles.to_html()],"Editor theme trigger keeps tint and both base colors through save/load")
+	check(theme_entry==[9,452.0,220.0,"#ffaa55",Color.GREEN.to_html(),editor.trigger_cycle_hue],"Editor theme trigger keeps tint and the hue-cycle toggle through save/load")
 	for kind in [10,11]:
 		editor.select_item(kind)
 		editor.last_cell=Vector2i(-999999,-999999)
