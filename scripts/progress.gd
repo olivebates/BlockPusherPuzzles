@@ -331,6 +331,7 @@ func delete_progress(restart := true) -> void:
 	save_elapsed=0
 	backup_elapsed=0
 	level=null
+	SaveSlots.clear_active_name()
 	backups_changed.emit()
 	if OS.has_feature("web"): JavaScriptBridge.force_fs_sync()
 	if restart:

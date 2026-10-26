@@ -42,10 +42,20 @@ static func encode(data: Dictionary) -> String:
 	bytes[6]=color.b8
 	bytes[7]=codec
 	bytes.append_array(payload)
-	return PREFIX+Marshalls.raw_to_base64(bytes)
+	var code := PREFIX+Marshalls.raw_to_base64(bytes)
+	if data.has("metadata"):
+		var meta: Dictionary=data.metadata
+		return CommunityCodec.level(code,str(meta.get("n","")),str(meta.get("a","")),str(meta.get("d","")))
+	return code
 
 static func decode(text: String) -> Dictionary:
 	text=text.strip_edges()
+	if text.begins_with("CPE2:"):
+		var meta := CommunityCodec.metadata(text)
+		if meta.is_empty(): return {}
+		var result := decode(meta.l)
+		if not result.is_empty(): result.metadata={"n":meta.n,"a":meta.a,"d":meta.d}
+		return result
 	if not text.begins_with(PREFIX) or text.length()>MAX_CELLS*2: return {}
 	var encoded := text.substr(PREFIX.length())
 	if encoded.is_empty() or encoded.length()%4!=0: return {}

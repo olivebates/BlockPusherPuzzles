@@ -4,6 +4,7 @@ func capture() -> void:
 	root.get_node("Progress").enabled=false
 	var editor: Node2D=load("res://scenes/level_editor.tscn").instantiate()
 	editor.draft_path="res://.godot/capture-no-draft.cpe"
+	editor.publisher_settings_path="res://.godot/capture-publishing.cfg"
 	root.add_child(editor)
 	current_scene=editor
 	for i in 6: await process_frame
@@ -27,6 +28,13 @@ func capture() -> void:
 				block.set_physics_process(false)
 				block.position.y-=48
 			mode="spawn-outlines"
+	elif "--publish" in OS.get_cmdline_user_args():
+		editor.verified_level_code=LevelEditorCodec.encode(editor.data)
+		editor.show_upload_prompt()
+		mode="publish"
+	elif "--publish-test" in OS.get_cmdline_user_args():
+		editor.begin_publish_test()
+		mode="publish-test"
 	elif "--export" in OS.get_cmdline_user_args():
 		editor.show_export()
 		mode="export"

@@ -165,7 +165,7 @@ func run() -> void:
 	settings.delete_confirmation.confirmed.emit()
 	for i in 6: await process_frame
 	check(not FileAccess.file_exists(progress.save_root+"/current.cps") and progress.list_backups().is_empty(),"Only the third confirmation deletes progress and every backup")
-	check(current_scene.scene_file_path=="res://scenes/main.tscn","Deleting progress restarts the game")
+	check(current_scene.scene_file_path=="res://scenes/main_menu.tscn","Deleting progress returns to the main menu to choose a save slot")
 	var remaining := current_scene
 	current_scene=null
 	remaining.queue_free()

@@ -10,8 +10,10 @@ config_version=5
 
 [application]
 
-config/name="Chromatic Push"
-run/main_scene="res://scenes/main.tscn"
+config/name="Prismbound"
+config/use_custom_user_dir=true
+config/custom_user_dir_name="Godot/app_userdata/Chromatic Push"
+run/main_scene="res://scenes/main_menu.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 
@@ -22,6 +24,7 @@ InputBindings="*res://scripts/input_bindings.gd"
 Progress="*res://scripts/progress.gd"
 Dialogue="*res://scripts/dialogue.gd"
 LevelEditorSession="*res://scripts/level_editor_session.gd"
+SaveSlots="*res://scripts/save_slots.gd"
 
 [display]
 

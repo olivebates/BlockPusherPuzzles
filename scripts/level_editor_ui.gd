@@ -28,6 +28,22 @@ static func button(text: String, callback: Callable) -> Button:
 	result.pressed.connect(callback)
 	return result
 
+static func compact_buttons(control: Control) -> void:
+	for state in ["normal","hover","pressed","disabled","focus"]:
+		var style := control.theme.get_stylebox(state,"Button").duplicate() as StyleBox
+		style.set_content_margin_all(8)
+		control.theme.set_stylebox(state,"Button",style)
+
+static func tint_button(button: Button, color: Color) -> void:
+	for state in ["normal","hover","pressed","disabled","focus"]:
+		var style := StyleBoxFlat.new()
+		style.bg_color=color.lightened(0.12) if state in ["hover","pressed"] else color
+		style.border_color=color.lightened(0.35)
+		style.set_border_width_all(1)
+		style.set_content_margin_all(8)
+		button.add_theme_stylebox_override(state,style)
+	button.add_theme_color_override("font_color",Color("f9f1ff"))
+
 # Canvas controls keep every popup inside the game viewport, including on web.
 class Modal extends Control:
 	var panel: PanelContainer
@@ -36,6 +52,7 @@ class Modal extends Control:
 	var cancel_action: Callable
 	func _init(color: Color, message: String, choices: Dictionary) -> void:
 		process_mode=Node.PROCESS_MODE_ALWAYS
+		z_index=100
 		set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		theme=LevelEditorUI.theme_for(color)
 		var shade := ColorRect.new()

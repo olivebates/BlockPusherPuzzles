@@ -2,6 +2,8 @@ extends Node2D
 const TOP := 48
 const BOTTOM := 88
 var draft_path := "user://level_editor_draft.cpe"
+var initial_level_code := ""
+var fit_grid_to_view := true
 var background_color := HuePalette.DEFAULT_BACKGROUND
 var data := {"v":1,"grid":[40,20,16],"color":"", "tiles":[],"objects":[]}
 var selected_kind := 0
@@ -29,6 +31,24 @@ var history: Array[Dictionary]=[]
 var stroke_saved := false
 var play_frames := 0
 var objective: Label
+var publish_hint: Label
+var publisher: LevelPublisher
+var publisher_settings_path := "user://level_publishing.cfg"
+var verified_level_code := ""
+var test_level_code := ""
+var publishing_test := false
+var upload_name: LineEdit
+var upload_author: LineEdit
+var upload_description: LineEdit
+var cloud_level_id := ""
+var cloud_revision := 0
+var upload_error: Label
+var upload_button: Button
+var upload_back: Button
+var upload_request_id := ""
+var upload_payload := ""
+var cooldown_label: Label
+var cooldown_timer: Timer
 
 class Board extends Control:
 	var editor: Node2D
@@ -120,8 +140,10 @@ func _ready() -> void:
 	bar.add_child(export_button)
 	play_button=LevelEditorUI.button("Play",toggle_play)
 	bar.add_child(play_button)
+	bar.add_child(LevelEditorUI.button("Publish",request_publish))
 	bar.add_child(LevelEditorUI.button("Exit",func(): LevelEditorSession.exit_editor()))
 	var bottom := PanelContainer.new()
+	bottom.name="PalettePanel"
 	bottom.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	bottom.offset_top=-BOTTOM
 	ui.add_child(bottom)
@@ -167,6 +189,20 @@ func _ready() -> void:
 	objective.offset_bottom=-BOTTOM-4
 	objective.hide()
 	ui.add_child(objective)
+	publish_hint=Label.new()
+	publish_hint.text="You must complete the puzzle before publishing."
+	publish_hint.add_theme_font_size_override("font_size",12)
+	publish_hint.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	publish_hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	publish_hint.offset_left=8
+	publish_hint.offset_top=-BOTTOM-24
+	publish_hint.offset_bottom=-BOTTOM-4
+	publish_hint.hide()
+	ui.add_child(publish_hint)
+	if not is_instance_valid(publisher):
+		publisher=LevelPublisher.new()
+		publisher.config_path=publisher_settings_path
+		add_child(publisher)
 	get_viewport().size_changed.connect(layout)
 	layout()
 	data.grid=[mini(40,int(width_input.max_value)),mini(20,int(height_input.max_value)),16]
@@ -191,6 +227,12 @@ func add_dimension(bar: HBoxContainer, caption: String) -> SpinBox:
 	return input
 
 func load_draft() -> void:
+	if not initial_level_code.is_empty():
+		var initial := LevelEditorCodec.decode(initial_level_code)
+		if not initial.is_empty():
+			data=initial
+			background_color=Color.html(data.color)
+		return
 	if not FileAccess.file_exists(draft_path): return
 	var file := FileAccess.open(draft_path,FileAccess.READ)
 	if not file or file.get_length()>LevelEditorCodec.MAX_CELLS*2: return
@@ -243,16 +285,19 @@ func layout() -> void:
 	var size := get_viewport_rect().size
 	ui.size=size
 	updating=true
-	width_input.max_value=clampi(floori((size.x-16)/16),1,512)
-	height_input.max_value=clampi(floori((size.y-TOP-BOTTOM-16)/16),1,512)
+	width_input.max_value=clampi(floori((size.x-16)/16),1,512) if fit_grid_to_view else 512
+	height_input.max_value=clampi(floori((size.y-TOP-BOTTOM-16)/16),1,512) if fit_grid_to_view else 512
 	updating=false
 	if data.grid[0]>width_input.max_value or data.grid[1]>height_input.max_value:
 		if playing: stop_play()
 		remember_edit()
 		crop_grid(mini(data.grid[0],int(width_input.max_value)),mini(data.grid[1],int(height_input.max_value)))
 	board.size=Vector2(data.grid[0]*16,data.grid[1]*16)
-	board.position=Vector2(floorf((size.x-board.size.x)/2),TOP+floorf((size.y-TOP-BOTTOM-board.size.y)/2))
+	var fit := minf(1.0,minf((size.x-16)/board.size.x,(size.y-TOP-BOTTOM-16)/board.size.y))
+	board.scale=Vector2.ONE*fit
+	board.position=Vector2(floorf((size.x-board.size.x*fit)/2),TOP+floorf((size.y-TOP-BOTTOM-board.size.y*fit)/2))
 	play_view.position=board.position
+	play_view.scale=board.scale
 	play_view.size=board.size
 	play_viewport.size=Vector2i(board.size)
 	sync_controls()
@@ -272,9 +317,16 @@ func resize_grid(_value: float) -> void:
 	layout()
 
 func crop_grid(width: int, height: int) -> void:
+	var before := data.duplicate(true)
 	data.grid=[width,height,16]
 	data.tiles=data.tiles.filter(func(tile: Array): return tile[0]<width and tile[1]<height)
 	data.objects=data.objects.filter(func(item: Array): return item[1]<width*16 and item[2]<height*16)
+	if before!=data: invalidate_completion()
+
+func invalidate_completion() -> void:
+	verified_level_code=""
+	publishing_test=false
+	if publish_hint: publish_hint.hide()
 
 func remember_edit() -> void:
 	history.append(data.duplicate(true))
@@ -282,7 +334,9 @@ func remember_edit() -> void:
 
 func undo() -> void:
 	if playing or history.is_empty(): return
+	var before := data.duplicate(true)
 	data=history.pop_back()
+	if before!=data: invalidate_completion()
 	background_color=Color.html(data.color)
 	crop_grid(mini(data.grid[0],int(width_input.max_value)),mini(data.grid[1],int(height_input.max_value)))
 	update_theme()
@@ -301,6 +355,7 @@ func paint_at(cell: Vector2i) -> void:
 	board.queue_redraw()
 
 func paint_cell(cell: Vector2i) -> void:
+	var before := data.duplicate(true)
 	if not stroke_saved:
 		remember_edit()
 		stroke_saved=true
@@ -309,20 +364,20 @@ func paint_cell(cell: Vector2i) -> void:
 	if erase:
 		data.tiles.erase(tile)
 		data.objects=data.objects.filter(func(item: Array): return Vector2(item[1],item[2])!=point)
-		return
-	if selected_kind==0:
+	elif selected_kind==0:
 		if not data.tiles.has(tile): data.tiles.append(tile)
 		data.objects=data.objects.filter(func(item: Array): return Vector2(item[1],item[2])!=point)
-		return
-	data.tiles.erase(tile)
-	var marker := selected_kind in [3,10,11]
-	data.objects=data.objects.filter(func(item: Array):
-		if selected_kind==1 and item[0]==1: return false
-		return Vector2(item[1],item[2])!=point or (item[0] in [3,10,11])!=marker)
-	var item := [selected_kind,point.x,point.y]
-	if selected_kind==2: item.append_array([selected_hue,0.2,0.15])
-	elif selected_kind==3: item.append_array([selected_hue,"E%d_%d"%[cell.x,cell.y]])
-	data.objects.append(item)
+	else:
+		data.tiles.erase(tile)
+		var marker := selected_kind in [3,10,11]
+		data.objects=data.objects.filter(func(item: Array):
+			if selected_kind==1 and item[0]==1: return false
+			return Vector2(item[1],item[2])!=point or (item[0] in [3,10,11])!=marker)
+		var item := [selected_kind,point.x,point.y]
+		if selected_kind==2: item.append_array([selected_hue,0.2,0.15])
+		elif selected_kind==3: item.append_array([selected_hue,"E%d_%d"%[cell.x,cell.y]])
+		data.objects.append(item)
+	if before!=data: invalidate_completion()
 
 func update_theme() -> void:
 	data.color=background_color.to_html(false)
@@ -342,6 +397,9 @@ func update_theme() -> void:
 	board.queue_redraw()
 
 func close_popup() -> void:
+	cooldown_label=null
+	if is_instance_valid(cooldown_timer): cooldown_timer.queue_free()
+	cooldown_timer=null
 	if is_instance_valid(popup):
 		ui.remove_child(popup)
 		popup.queue_free()
@@ -373,6 +431,7 @@ func show_color_picker() -> void:
 	popup.rows.move_child(picker,1)
 	remember_edit()
 	picker.color_changed.connect(func(color: Color):
+		if data.color!=color.to_html(false): invalidate_completion()
 		background_color=color
 		update_theme()
 		popup.theme=LevelEditorUI.theme_for(color))
@@ -400,6 +459,7 @@ func show_import() -> void:
 			error.text="Level is too large for this view (maximum %d × %d)."%[width_input.max_value,height_input.max_value]
 			return
 		remember_edit()
+		if LevelEditorCodec.encode(data)!=LevelEditorCodec.encode(imported): invalidate_completion()
 		data=imported
 		background_color=Color.html(data.color)
 		close_popup()
@@ -432,6 +492,7 @@ func toggle_play() -> void:
 
 func start_play() -> void:
 	painting=false
+	test_level_code=LevelEditorCodec.encode(data)
 	playing=true
 	play_frames=0
 	world=Node2D.new()
@@ -455,11 +516,13 @@ func start_play() -> void:
 	board.hide()
 	set_edit_enabled(false)
 	play_button.text="Edit"
-	objective.show()
+	objective.visible=not publishing_test
+	publish_hint.visible=publishing_test
 
 func stop_play() -> void:
 	if not playing: return
 	playing=false
+	publishing_test=false
 	if is_instance_valid(world):
 		play_viewport.remove_child(world)
 		world.queue_free()
@@ -470,6 +533,7 @@ func stop_play() -> void:
 	set_edit_enabled(true)
 	play_button.text="Play"
 	objective.hide()
+	publish_hint.hide()
 	board.queue_redraw()
 
 func set_edit_enabled(enabled: bool) -> void:
@@ -485,11 +549,146 @@ func _process(_delta: float) -> void:
 	play_frames+=1
 	if play_frames<3: return
 	var pads := get_tree().get_nodes_in_group("pads")
-	if pads.is_empty(): return
+	var has_pad := false
 	for pad in pads:
+		if not world.is_ancestor_of(pad): continue
+		has_pad=true
 		if not pad.filled: return
+	if not has_pad: return
+	var open_upload := publishing_test
+	verified_level_code=test_level_code if LevelEditorCodec.encode(data)==test_level_code else ""
 	stop_play()
-	show_message("Good job!\n\n You beat the level!")
+	if open_upload: show_upload_prompt()
+	else: show_message("Good job!\n\n You beat the level!")
+
+func request_publish() -> void:
+	if is_instance_valid(popup): return
+	if publisher.cooldown_remaining()>0:
+		show_message(publisher.cooldown_message())
+		cooldown_label=popup.rows.get_child(0)
+		start_cooldown_timer()
+		return
+	if not verified_level_code.is_empty() and verified_level_code==LevelEditorCodec.encode(data):
+		stop_play()
+		show_upload_prompt()
+		return
+	get_tree().paused=true
+	popup=LevelEditorUI.modal(ui,background_color,"You must complete the puzzle before publishing",{"Okay":begin_publish_test})
+	popup.cancel_action=close_popup
+
+func begin_publish_test() -> void:
+	close_popup()
+	var has_key := false
+	for item in data.objects:
+		if item[0]==3: has_key=true
+	if not LevelData.valid(data) or not has_key:
+		show_message("Place one player and at least one key before publishing your level.")
+		return
+	publishing_test=true
+	if not playing: start_play()
+	objective.hide()
+	publish_hint.show()
+
+func show_upload_prompt() -> void:
+	if verified_level_code.is_empty() or verified_level_code!=LevelEditorCodec.encode(data):
+		request_publish()
+		return
+	close_popup()
+	get_tree().paused=true
+	upload_request_id=""
+	upload_payload=""
+	popup=LevelEditorUI.modal(ui,background_color,"Publish puzzle",{})
+	popup.cancel_action=func():
+		if not publisher.uploading: close_popup()
+	for caption in ["Puzzle Name","Author","Description (100 characters)"]:
+		var row := VBoxContainer.new()
+		var label := Label.new()
+		label.text=caption
+		row.add_child(label)
+		var input := LineEdit.new()
+		input.custom_minimum_size.x=320
+		input.max_length=80 if caption=="Puzzle Name" else 40 if caption=="Author" else 100
+		row.add_child(input)
+		popup.rows.add_child(row)
+		popup.rows.move_child(row,popup.rows.get_child_count()-2)
+		if caption=="Puzzle Name": upload_name=input
+		elif caption=="Author": upload_author=input
+		else: upload_description=input
+	var meta: Dictionary=data.get("metadata",{})
+	upload_name.text=str(meta.get("n",""))
+	upload_author.text=str(meta.get("a",publisher.last_author))
+	upload_description.text=str(meta.get("d",""))
+	upload_error=Label.new()
+	upload_error.custom_minimum_size.x=320
+	upload_error.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+	popup.rows.add_child(upload_error)
+	popup.rows.move_child(upload_error,popup.rows.get_child_count()-2)
+	upload_back=LevelEditorUI.button("Back",close_popup)
+	popup.actions.add_child(upload_back)
+	upload_button=LevelEditorUI.button("Publish",upload_level)
+	popup.actions.add_child(upload_button)
+	upload_name.grab_focus()
+	start_cooldown_timer()
+
+func start_cooldown_timer() -> void:
+	if is_instance_valid(cooldown_timer): cooldown_timer.queue_free()
+	cooldown_timer=Timer.new()
+	cooldown_timer.process_mode=Node.PROCESS_MODE_ALWAYS
+	cooldown_timer.wait_time=0.2
+	popup.add_child(cooldown_timer)
+	cooldown_timer.timeout.connect(update_cooldown)
+	cooldown_timer.start()
+	update_cooldown()
+
+func update_cooldown() -> void:
+	var remaining := publisher.cooldown_remaining()
+	if is_instance_valid(cooldown_label):
+		cooldown_label.text=publisher.cooldown_message() if remaining>0 else "You can publish now."
+		return
+	if not is_instance_valid(upload_button) or publisher.uploading: return
+	upload_button.disabled=remaining>0
+	upload_button.text="Publish (%d:%02d)"%[remaining/60,remaining%60] if remaining>0 else "Publish"
+	if remaining>0: upload_error.text=publisher.cooldown_message()
+	elif upload_error.text.begins_with("Please wait "): upload_error.text=""
+
+func upload_level() -> void:
+	if publisher.uploading: return
+	var puzzle_name := upload_name.text.strip_edges()
+	var author := upload_author.text.strip_edges()
+	if puzzle_name.is_empty() or author.is_empty():
+		upload_error.text="Enter a Puzzle Name and Author."
+		return
+	var encoded := LevelEditorCodec.encode(data)
+	if verified_level_code.is_empty() or verified_level_code!=encoded:
+		close_popup()
+		request_publish()
+		return
+	# Keep the same request ID on retries after an uncertain network response.
+	var payload := JSON.stringify([puzzle_name,author,upload_description.text,encoded])
+	if payload!=upload_payload:
+		upload_payload=payload
+		upload_request_id=Crypto.new().generate_random_bytes(16).hex_encode()
+	upload_button.disabled=true
+	upload_back.disabled=true
+	upload_name.editable=false
+	upload_author.editable=false
+	upload_description.editable=false
+	upload_button.text="Publishing..."
+	upload_error.text=""
+	var result: Dictionary=await publisher.publish(puzzle_name,author,encoded,upload_request_id,upload_description.text,cloud_level_id,cloud_revision)
+	if result.get("ok",false):
+		data.metadata={"n":puzzle_name,"a":author,"d":upload_description.text}
+		verified_level_code=LevelEditorCodec.encode(data)
+		if not cloud_level_id.is_empty(): cloud_revision=int(result.get("revision",cloud_revision))
+		show_message("Puzzle published!")
+		return
+	upload_button.disabled=false
+	upload_back.disabled=false
+	upload_name.editable=true
+	upload_author.editable=true
+	upload_description.editable=true
+	upload_button.text="Publish"
+	upload_error.text=result.get("error","Couldn't publish the puzzle. Please try again.")
 
 func _input(event: InputEvent) -> void:
 	if not event is InputEventKey or not event.pressed or event.echo: return

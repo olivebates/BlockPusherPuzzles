@@ -1,4 +1,16 @@
-# Chromatic Push
+# Prismbound
+
+Start with **F5** to open the animated title screen. **Play Game** offers three
+local save slots: name an empty slot, or select an existing one to continue.
+Each slot shows its name and collected-orb count and keeps separate progress
+and backups. Older single-save progress is copied into **Original Save** in slot
+one; the original files remain intact. The native user-data directory stays
+compatible with the earlier Chromatic Push name. **Main Menu** in settings saves
+the current slot before returning to the title screen.
+
+**Level Editor** and **Custom Levels** on the title screen each show the spoiler
+warning. They work without starting a campaign slot. The level browser's
+**Make Levels** button uses lilac; editor Exit returns to level selection.
 
 A Godot 4.7 2D platformer and color-block puzzle engine, validated with the included 4.7.2 executable. Open `project.godot` and press **F6** on `scenes/main.tscn`, or **F5** to run the project. Designed on a **16 × 16 pixel tile grid**, with a **960 × 540 base viewport** (1920/2 × 1080/2). Canvas stretching with **Expand** fills the window while keeping the artwork's aspect ratio: different window proportions reveal more world instead of stretching pixels. The camera magnifies the world 2× for readability and follows freely past level boundaries, including the origin. The player uses the supplied `assets/playerSprite.png`, flipping horizontally when moving left and retaining its facing direction when idle. The background is **40% dark / 60% brightness** (`#999999`); wall tiles are **80% dark / 20% brightness** (`#333333`). Color triggers preserve these brightness levels. No downloads or asset packs required.
 
@@ -32,7 +44,37 @@ The **Level Editor** button to the right of Donate opens the in-game editor menu
 
 The toolbar sets the level width, height, and color. Tiles are 16 by 16 pixels; dimensions are capped to the available area between the toolbar and palette. Reducing dimensions crops the level, and undo restores the previous draft where it fits. **Export** produces a compact `CPE1:` string using packed cell data, the smallest of four lossless compression codecs, and Base64. **Import** validates and loads that string, including its level color. The palette shows the player first and uses the game's object drawings and animated surface shader. Adjacent blocks of the same color merge visually with a shared outline and pivot while editing.
 
-**Play** or Space toggles play testing without changing the draft. Use the usual game controls (W or Up jumps with the default bindings); Space always returns to editing. A reminder above the palette explains the goal during play. Filling every key with its matching block displays the victory popup and returns to editing. **Exit**, immediately to the right of Play, saves the authored draft to `user://level_editor_draft.cpe`, restores the main game from its temporary save, and deletes that temporary file after a successful restore. The next editor visit restores the saved draft, including its dimensions, objects, and color. Export also lets you keep or share additional levels.
+**Play** or Space toggles play testing without changing the draft. Use the usual game controls (W or Up jumps with the default bindings); Space always returns to editing. A reminder above the palette explains the goal during play. Filling every key with its matching block displays the victory popup and returns to editing. **Exit** saves the authored draft to `user://level_editor_draft.cpe`, restores the main game from its temporary save, and deletes that temporary file after a successful restore. The next editor visit restores the saved draft, including its dimensions, objects, and color. Export also lets you keep or share additional levels.
+
+**Publish**, immediately left of Exit, requires a test-mode win with no subsequent level changes. An unchanged verified puzzle opens the upload form directly. Otherwise, acknowledge the completion popup with **Okay** to enter test mode; a bottom-left reminder stays visible until you finish or return to editing. Winning that test opens the form automatically. Enter **Puzzle Name** and **Author**, then choose **Back** or **Publish**. Successful publication uploads the authored `CPE2:` string to Convex and starts a five-minute cooldown that survives game restarts. Failed uploads keep the form available for retry. The backend also enforces the cooldown per anonymous installation. See [backend setup](backend/README.md) to deploy the HTTP endpoint to the supplied Convex cloud.
+
+The publish form also accepts a **Description** of up to 100 characters. Published and exported community puzzles use `CPE2:` codes, which embed the name, author, description, and original packed puzzle together. Existing `CPE1:` codes still import. A new puzzle starts with the uploader's own like. The five-minute publication cooldown applies to both new puzzles and edits.
+
+The **Level Editor** menu lists community puzzles above **Make Levels**, with 50 entries per page, a scrollbar, and live name/author substring search. Choose **Hot**, **No Completions**, **Top Today**, **Top Week**, **Top Month**, or **Top Year**. Expand a row to read its description and choose **Play** or **Replays**. On web, a cookie for each uploaded puzzle enables **Edit** and **Delete**; native builds keep the ownership list in the publishing settings. Deleting asks for confirmation and removes the puzzle and its replays. Editing loads the current cloud version and requires another successful test before updating it.
+
+Completing a community puzzle opens **Save Replay?**, with Like/Dislike, **Say something nice** (40 characters), and Author. An empty author becomes **Anonymous**. Completion is counted even if no replay is saved. Replay entries show author, comment, and completion time; the redundant name column and heading are omitted to give comments more room. Opening one plays the recorded run with live gameplay inputs disabled; use the timeline to seek in either direction, Pause/Play to control playback, and **Back** at bottom right to return to that puzzle's replays. Main-game progress remains suspended throughout community play and is restored when leaving.
+
+Settings follow the current game palette and group audio, controls, and save
+management into padded panels. **Reset to default** restores controls. Choosing
+a backup asks for confirmation before replacing the active slot's progress.
+
+## HTML5 validation
+
+The Web export uses the single-threaded compatibility renderer. Serve the
+exported files over HTTP or HTTPS. Slot saves, slot names, audio, key bindings,
+editor drafts, and publishing identity are synced to the browser filesystem;
+uploaded-level ownership is also tracked by cookies on that origin.
+
+`tools/test_main_menu.gd` checks native slots, migration, settings and backup
+confirmation. `tools/test_community.gd` checks the browser menus and replays.
+For browser verification, export the production project to
+`.godot/web-export/index.html`, run
+`powershell -NoProfile -ExecutionPolicy Bypass -File tools/prepare_web_test.ps1`
+to make the isolated test export, then use Node.js 22+ to run
+`node tools/run_web_test.mjs` from the repository root. On Windows it uses Edge;
+set `BROWSER_EXECUTABLE` for another Chromium browser. It tests saves across
+page reloads, cookies, uploads/downloads against a local fixture server, and
+read-only requests to the live Convex cloud. No test levels are published.
 
 The **Fireworks area** (`celebration_area.tscn`) object creates a dark gray backdrop and launches
 fireworks from the bottom of the screen while the player is inside. Place the

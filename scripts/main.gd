@@ -22,7 +22,7 @@ func _ready() -> void:
 	if main_scene.begins_with("uid://"):
 		var uid := ResourceUID.text_to_id(main_scene)
 		if ResourceUID.has_id(uid): main_scene=ResourceUID.get_id_path(uid)
-	if scene_file_path==main_scene: Progress.call_deferred("bind_level",self)
+	if scene_file_path==main_scene or scene_file_path=="res://scenes/main.tscn": Progress.call_deferred("bind_level",self)
 	initial_background = background_color
 	initial_tiles = tile_color
 	call_deferred("remember_level")

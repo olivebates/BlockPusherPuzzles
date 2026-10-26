@@ -56,6 +56,7 @@ func save_bindings() -> void:
 			elif event is InputEventMouseButton: tokens.append(["mouse",int(event.button_index)])
 		config.set_value("bindings",action,tokens)
 	config.save(PATH)
+	if OS.has_feature("web"): JavaScriptBridge.force_fs_sync()
 func reset_defaults() -> void:
 	for action in DEFAULTS:
 		var events: Array[InputEvent] = []

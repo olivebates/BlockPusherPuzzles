@@ -20,6 +20,8 @@ var solid_layer := 2
 var solid_mask := 5
 var rotation_locks := {}
 var safety: PlayerSafety
+var allow_noclip := true
+var input_source: Node
 @onready var visual: Sprite2D = $Visual
 func _ready() -> void:
 	add_to_group("player")
@@ -40,7 +42,7 @@ func _physics_process(delta: float) -> void:
 		buffered=0
 		coyote=0
 		return
-	var flying := not OS.has_feature("web") and Input.is_physical_key_pressed(KEY_SHIFT)
+	var flying := allow_noclip and not OS.has_feature("web") and Input.is_physical_key_pressed(KEY_SHIFT)
 	if flying != noclip:
 		if flying:
 			solid_layer = collision_layer
@@ -75,8 +77,8 @@ func _physics_process(delta: float) -> void:
 	var was_grounded := is_on_floor()
 	var previous_fall := velocity.y
 	coyote = 0.10 if was_grounded else maxf(0.0,coyote-delta)
-	buffered = 0.12 if Input.is_action_just_pressed("jump") else maxf(0.0,buffered-delta)
-	var axis := Input.get_axis("left","right")
+	buffered = 0.12 if action_just_pressed("jump") else maxf(0.0,buffered-delta)
+	var axis: float = input_source.input_axis() if is_instance_valid(input_source) else Input.get_axis("left","right")
 	if axis != 0:
 		facing = axis
 		visual.flip_h = axis<0
@@ -209,7 +211,7 @@ func update_recall_target() -> Node2D:
 			if closest.is_in_group("blocks"):
 				for member in closest.leader.members: member.recall_available = false
 			else: closest.recall_available = false
-		if Input.is_action_just_pressed("reset_block"): closest.reset_home()
+		if action_just_pressed("reset_block"): closest.reset_home()
 	for actor in actors: actor.queue_redraw()
 	queue_redraw()
 	return closest
@@ -226,4 +228,7 @@ func _draw() -> void:
 func map_hint() -> String:
 	if Progress.map_hint_stage not in [1,2]: return ""
 	return InputBindings.prompt("map").to_upper()+(" - Teleport" if Progress.map_hint_stage==2 else "")
+
+func action_just_pressed(action: String) -> bool:
+	return input_source.action_just_pressed(action) if is_instance_valid(input_source) else Input.is_action_just_pressed(action)
 

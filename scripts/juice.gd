@@ -33,6 +33,7 @@ func set_volume(bus_name: String, amount: float) -> void:
 	var config := ConfigFile.new()
 	for name in volumes: config.set_value("volume",name,volumes[name])
 	config.save("user://audio.cfg")
+	if OS.has_feature("web"): JavaScriptBridge.force_fs_sync()
 func sound(kind: String, pitch := 1.0) -> void:
 	var frequency := 220.0
 	var duration := 0.12

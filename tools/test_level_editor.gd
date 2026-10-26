@@ -21,6 +21,8 @@ func run() -> void:
 	var progress := root.get_node("Progress")
 	progress.save_root="res://.godot/level-editor-test-progress"
 	var session := root.get_node("LevelEditorSession")
+	# Catalogue availability must not make editor regression tests depend on the cloud.
+	session.service.endpoint="http://127.0.0.1:1/levels"
 	session.draft_path="res://.godot/level-editor-test-draft.cpe"
 	if FileAccess.file_exists(session.draft_path): DirAccess.remove_absolute(session.draft_path)
 	var game: Node2D=load("res://scenes/main.tscn").instantiate()
@@ -188,6 +190,7 @@ func run() -> void:
 	session.exit_editor()
 	for i in 6: await process_frame
 	check(current_scene==game and game.is_inside_tree() and progress.enabled,"Exit resumes the main game and re-enables its autosave")
+	check(paused and is_instance_valid(session.overlay) and session.overlay.rows.get_child(0) is CommunityBrowser,"Local editor Exit reopens level selection over the restored game")
 	check(player.position==saved_position,"Exit loads the player position from the temporary save")
 	check(not FileAccess.file_exists(session.TEMP_PATH),"Exit deletes the temporary save after a successful restore")
 	check(get_nodes_in_group("player").size()==1,"Editor playtest objects are removed from gameplay groups")
@@ -203,6 +206,7 @@ func run() -> void:
 	session.exit_editor()
 	for i in 4: await process_frame
 	check(FileAccess.get_file_as_string(session.draft_path)==draft_code,"Later exits replace the previous saved draft")
+	session.close_menu()
 	progress.enabled=false
 	current_scene=null
 	game.queue_free()

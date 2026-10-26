@@ -59,7 +59,7 @@ func _ready() -> void:
 	add_child(outline)
 	call_deferred("weld_start_neighbors")
 func weld_start_neighbors() -> void:
-	if leader != self: return
+	if not is_inside_tree() or leader != self: return
 	var found := true
 	while found:
 		found = false
