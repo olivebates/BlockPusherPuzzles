@@ -72,6 +72,7 @@ func show_menu(replay_level: Dictionary = {}) -> void:
 	for button in overlay.actions.get_children(): button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	LevelEditorUI.tint_button(overlay.actions.get_child(0),Color("8564ad"))
 	overlay.cancel_action=close_menu
+	overlay.set_meta("selection_menu",true)
 	var browser := CommunityBrowser.new()
 	browser.session=self
 	browser.service=service
@@ -85,8 +86,8 @@ func enter_editor() -> void:
 	pending_level={}
 	pending_replay=""
 	pending_edit=false
-	return_browser=true
-	return_replays={}
+	return_browser=is_instance_valid(overlay) and overlay.get_meta("selection_menu",false)
+	return_replays=overlay.rows.get_child(0).replay_level.duplicate(true) if return_browser else {}
 	begin_session()
 
 func enter_community(entry: Dictionary, replay_code := "", editing := false) -> void:

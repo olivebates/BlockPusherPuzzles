@@ -14,8 +14,11 @@ var initial_background := HuePalette.DEFAULT_BACKGROUND
 var initial_tiles := HuePalette.DEFAULT_TILES
 var reset_keys := {}
 var reset_latched := false
+var applied_tiles := Color(-1,-1,-1)
 func _ready() -> void:
 	get_viewport().size_changed.connect(queue_redraw)
+	get_tree().node_added.connect(func(node: Node):
+		if node is TileMapLayer or node.get_script()==preload("res://scripts/one_way.gd"): applied_tiles=Color(-1,-1,-1))
 	var main_scene := str(ProjectSettings.get_setting("application/run/main_scene"))
 	# Godot can store the main scene as a UID rather than a resource path.
 	# Compare resolved paths so exported/editor launches both enable autosaving.
@@ -139,8 +142,11 @@ func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("gentle") and not Input.is_physical_key_pressed(KEY_SHIFT): Juice.reduced_motion = not Juice.reduced_motion
 	queue_redraw()
 func apply_theme() -> void:
-	sync_hue_mask()
+	# The renderer's clear color is shared with editor/community scenes.
+	# Reapply it even if this scene's own palette has not changed.
 	RenderingServer.set_default_clear_color(background_color)
+	if tile_color==applied_tiles: return
+	applied_tiles=tile_color
 	for walls in find_children("*","TileMapLayer",true,false):
 		if walls.material is ShaderMaterial: walls.material.set_shader_parameter("tile_color",tile_color)
 	for body in get_tree().get_nodes_in_group("one_way_blocks"):

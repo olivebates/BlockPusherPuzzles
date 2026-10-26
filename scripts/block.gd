@@ -35,9 +35,13 @@ var automatic_recall_wait := 0.0
 var rotating := false
 var rotation_controller: Node2D
 var outline: Node2D
+var visual_state: Array=[]
+var visual_energy := -1.0
 func _ready() -> void:
 	if Engine.is_editor_hint(): return
 	add_to_group("blocks")
+	set_notify_transform(true)
+	PuzzleOccupancy.invalidate(self,"blocks")
 	safe_margin=0
 	floor_snap_length=0
 	collision_mask|=8
@@ -58,6 +62,12 @@ func _ready() -> void:
 	outline.z_index = 1
 	add_child(outline)
 	call_deferred("weld_start_neighbors")
+
+func _notification(what: int) -> void:
+	if what==NOTIFICATION_TRANSFORM_CHANGED and not Engine.is_editor_hint() and is_inside_tree(): PuzzleOccupancy.invalidate(self,"blocks")
+
+func _exit_tree() -> void:
+	if not Engine.is_editor_hint(): PuzzleOccupancy.invalidate(self,"blocks")
 func weld_start_neighbors() -> void:
 	if not is_inside_tree() or leader != self: return
 	var found := true
@@ -86,14 +96,27 @@ func weld_start_neighbors() -> void:
 				if collider is CollisionShape2D and collider.name != "CollisionShape2D": collider.disabled = true
 			found = true
 func sync_members() -> void:
+	PuzzleOccupancy.invalidate(self,"blocks")
 	for member in members:
 		if member != self:
 			member.global_position = global_position+member.weld_offset
 			member.sliding = sliding
 			member.flash = flash
-		if member.material: member.material.set_shader_parameter("energy",maxf(flash,charge/push_delay))
-		member.queue_redraw()
-	if is_instance_valid(outline): outline.queue_redraw()
+		member.refresh_visual()
+	if is_instance_valid(outline): outline.refresh()
+
+func refresh_visual() -> void:
+	var owner: CharacterBody2D=leader if is_instance_valid(leader) else self
+	var active_charge: float=owner.charge if owner.push_contact==self else 0.0
+	var state := [block_color,recall_available,on_key_tile,flash,active_charge]
+	if state!=visual_state:
+		visual_state=state
+		queue_redraw()
+		if owner==self and is_instance_valid(outline): outline.refresh()
+	var energy: float=maxf(flash,owner.charge/owner.push_delay)
+	if material and energy!=visual_energy:
+		visual_energy=energy
+		material.set_shader_parameter("energy",energy)
 func rebuild_weld_shapes() -> void:
 	for collider in get_children():
 		if collider is CollisionShape2D and collider.name!="CollisionShape2D": collider.free()
@@ -162,7 +185,6 @@ func _physics_process(delta: float) -> void:
 	# inside move_and_slide below may not.
 	if not sliding and absf(global_position.x-resting_x)>0.001: resting_x = global_position.x
 	flash = move_toward(flash,0,delta*4)
-	if material: material.set_shader_parameter("energy",maxf(flash,charge/push_delay))
 	if Engine.get_physics_frames()-last_push_frame > 1: charge = 0
 	if sliding:
 		var next_time := minf(slide_time+delta,slide_duration)
@@ -231,7 +253,6 @@ func _physics_process(delta: float) -> void:
 	sync_members()
 	check_portals()
 	for member in members: member.update_key_tile()
-	queue_redraw()
 func player_support_y() -> float:
 	var player := get_tree().get_first_node_in_group("player") as CharacterBody2D
 	if not player or player.noclip: return INF
@@ -258,12 +279,14 @@ func overlaps_player_horizontally(member: Node2D, player: CharacterBody2D) -> bo
 		if minf(member.global_position.x+8,rect.end.x)-maxf(member.global_position.x-8,rect.position.x)>0.25: return true
 	return false
 func update_key_tile() -> void:
+	var was_on_key := on_key_tile
 	on_key_tile = false
-	for pad in get_tree().get_nodes_in_group("pads"):
-		if pad.block_color == block_color and global_position.distance_to(pad.global_position)<2 and is_settled():
-			on_key_tile = true
-			break
-	queue_redraw()
+	if is_settled():
+		for pad in PuzzleOccupancy.nearby(self,"pads"):
+			if pad.block_color==block_color and global_position.distance_squared_to(pad.global_position)<4:
+				on_key_tile=true
+				break
+	if was_on_key!=on_key_tile: queue_redraw()
 func is_settled() -> bool:
 	var body: CharacterBody2D = leader if is_instance_valid(leader) else self
 	return not body.rotating and not body.sliding and Engine.get_physics_frames()-body.carried_frame>1

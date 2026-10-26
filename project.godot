@@ -25,6 +25,7 @@ Progress="*res://scripts/progress.gd"
 Dialogue="*res://scripts/dialogue.gd"
 LevelEditorSession="*res://scripts/level_editor_session.gd"
 SaveSlots="*res://scripts/save_slots.gd"
+GameMenu="*res://scripts/game_menu.gd"
 
 [display]
 

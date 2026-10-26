@@ -1,6 +1,9 @@
 @tool
 class_name WeldOutline
 extends Node2D
+var cached_offsets: Array[Vector2]=[]
+var cached_contours: Array[PackedVector2Array]=[]
+var visual_state: Array=[]
 static func draw_pivot(canvas: CanvasItem, center: Vector2) -> void:
 	var color := Color(1,0.83,0.2)
 	var origin := center.round()-Vector2(2,2)
@@ -54,13 +57,31 @@ static func contours(offsets: Array[Vector2]) -> Array[PackedVector2Array]:
 			polygon.append(polygon[0])
 			result.append(polygon)
 	return result
+func update_geometry() -> bool:
+	var body := get_parent()
+	var offsets: Array[Vector2]=[]
+	for member in body.members: offsets.append(member.weld_offset)
+	if offsets!=cached_offsets:
+		cached_offsets=offsets
+		cached_contours=contours(offsets)
+		return true
+	return false
+
+func refresh() -> void:
+	var body := get_parent()
+	if body.leader!=body: return
+	var changed := update_geometry()
+	var state := [body.block_color,body.recall_available,body.to_local(body.rotation_pivot_member().global_position)]
+	if changed or state!=visual_state:
+		visual_state=state
+		queue_redraw()
+
 func _draw() -> void:
 	var body := get_parent()
 	if body.leader!=body: return
-	var offsets: Array[Vector2]=[]
-	for member in body.members: offsets.append(member.weld_offset)
+	update_geometry()
 	var color := PuzzlePalette.color_for(body.block_color)
 	if body.recall_available: color=color.lightened(0.42)
-	for contour in contours(offsets): draw_polyline(contour,color,1,false)
+	for contour in cached_contours: draw_polyline(contour,color,1,false)
 	var pivot: Node2D=body.rotation_pivot_member()
 	draw_pivot(self,body.to_local(pivot.global_position))

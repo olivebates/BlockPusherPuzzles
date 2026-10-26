@@ -74,16 +74,16 @@ func show_home() -> void:
 	play.custom_minimum_size.y=64
 	play.add_theme_font_size_override("font_size",24)
 	content.add_child(play)
+	LevelEditorUI.tint_button(play,Color("8564ad"))
 	var extras := HBoxContainer.new()
 	extras.add_theme_constant_override("separation",8)
 	content.add_child(extras)
 	for caption in ["Level Editor","Custom Levels"]:
 		var destination := "editor" if caption=="Level Editor" else "browser"
-		var button := LevelEditorUI.button(caption,func(): LevelEditorSession.open_menu(destination,true))
+		var button := LevelEditorUI.button(caption,func(): LevelEditorSession.open_menu(destination))
 		button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 		button.custom_minimum_size.y=38
 		extras.add_child(button)
-		if destination=="editor": LevelEditorUI.tint_button(button,Color("8564ad"))
 
 func show_slots() -> void:
 	page="slots"
@@ -91,10 +91,30 @@ func show_slots() -> void:
 	heading("Choose your save",28,Color("d7edff"))
 	for i in 3:
 		var info := SaveSlots.slot_info(i)
-		var caption := "%d  ·  %s\n%d orbs collected"%[i+1,info.name,info.orbs] if info.occupied else "%d  ·  Empty slot"%(i+1)
+		var caption := "%s\n%d Found"%[info.name,info.orbs] if info.occupied else "Empty slot"
 		var button := LevelEditorUI.button(caption,func(): choose_slot(i))
 		button.custom_minimum_size.y=64
 		content.add_child(button)
+		if info.occupied:
+			LevelEditorUI.tint_button(button,Color("8564ad"))
+			for state in ["normal","hover","pressed","disabled","focus"]:
+				var style := button.get_theme_stylebox(state).duplicate() as StyleBox
+				style.content_margin_right=40
+				button.add_theme_stylebox_override(state,style)
+			var trash := LevelEditorUI.button("",func(): confirm_delete_slot(i))
+			trash.name="DeleteSlot"
+			trash.icon=preload("res://assets/trash.svg")
+			trash.tooltip_text="Delete save"
+			trash.custom_minimum_size=Vector2(28,28)
+			trash.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+			trash.offset_left=-28
+			trash.offset_right=0
+			trash.offset_top=0
+			trash.offset_bottom=28
+			button.add_child(trash)
+			LevelEditorUI.tint_button(trash,Color("8564ad"))
+			for state in ["normal","hover","pressed","disabled","focus"]:
+				trash.get_theme_stylebox(state).set_content_margin_all(6)
 	content.add_child(LevelEditorUI.button("Back",show_home))
 
 func choose_slot(index: int) -> void:
@@ -115,6 +135,17 @@ func choose_slot(index: int) -> void:
 	popup.rows.add_child(slot_error)
 	popup.rows.move_child(slot_error,2)
 	slot_name.grab_focus()
+
+func confirm_delete_slot(index: int) -> void:
+	if is_instance_valid(popup): return
+	var info := SaveSlots.slot_info(index)
+	popup=LevelEditorUI.modal(ui,background_color,"Free up \"%s\"?\nYour backups will be kept."%info.name,{"Back":close_popup,"Delete":func():
+		if not SaveSlots.delete_slot(index):
+			popup.rows.get_child(0).text="Couldn't delete this save. Please try again."
+			return
+		close_popup()
+		show_slots()})
+	popup.cancel_action=close_popup
 
 func create_save() -> void:
 	if launching: return
@@ -139,4 +170,5 @@ func close_popup() -> void:
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode==KEY_ESCAPE and page=="slots" and not is_instance_valid(popup):
+		get_viewport().set_input_as_handled()
 		show_home()

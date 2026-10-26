@@ -2,15 +2,20 @@
 
 Start with **F5** to open the animated title screen. **Play Game** offers three
 local save slots: name an empty slot, or select an existing one to continue.
-Each slot shows its name and collected-orb count and keeps separate progress
-and backups. Older single-save progress is copied into **Original Save** in slot
+Occupied slots are lilac, show their name and a **Found** count, and keep separate
+progress and backups. Their lilac trash button asks for confirmation before
+freeing that slot. Backups are kept and can be restored from settings after
+reusing the slot; the new game starts fresh. Older single-save progress is copied into **Original Save** in slot
 one; the original files remain intact. The native user-data directory stays
-compatible with the earlier Chromatic Push name. **Main Menu** in settings saves
-the current slot before returning to the title screen.
+compatible with the earlier Chromatic Push name. **Back to Main Menu** in the
+pause menu saves the current slot before returning to the title screen.
 
-**Level Editor** and **Custom Levels** on the title screen each show the spoiler
-warning. They work without starting a campaign slot. The level browser's
-**Make Levels** button uses lilac; editor Exit returns to level selection.
+**Level Editor** and **Custom Levels** share a one-time spoiler warning. Once
+**Continue** is accepted, it stays dismissed across restarts and browser reloads.
+They work without starting a campaign slot. The level browser's
+**Make Levels** button uses lilac. Editor **Exit** restores the screen it was
+opened from: the title screen, gameplay, or level selection. Escape closes level,
+replay, and save-slot selection menus.
 
 A Godot 4.7 2D platformer and color-block puzzle engine, validated with the included 4.7.2 executable. Open `project.godot` and press **F6** on `scenes/main.tscn`, or **F5** to run the project. Designed on a **16 × 16 pixel tile grid**, with a **960 × 540 base viewport** (1920/2 × 1080/2). Canvas stretching with **Expand** fills the window while keeping the artwork's aspect ratio: different window proportions reveal more world instead of stretching pixels. The camera magnifies the world 2× for readability and follows freely past level boundaries, including the origin. The player uses the supplied `assets/playerSprite.png`, flipping horizontally when moving left and retaining its facing direction when idle. The background is **40% dark / 60% brightness** (`#999999`); wall tiles are **80% dark / 20% brightness** (`#333333`). Color triggers preserve these brightness levels. No downloads or asset packs required.
 
@@ -25,6 +30,7 @@ A Godot 4.7 2D platformer and color-block puzzle engine, validated with the incl
 | Teleport player to nearest previously touched recall platform | Q |
 | Restart level | Enter |
 | Toggle gentle camera / particles | M |
+| Open / close pause menu | Escape |
 
 ## Settings
 
@@ -32,7 +38,13 @@ Color changers expose **Cycle Hue** in the Godot Inspector.
 When enabled, touching the changer starts a continuous 12-second hue
 loop. Touch a changer with Cycle Hue disabled to return to a fixed color.
 
-The **gear button at the top right** opens Music and Sound effects sliders and keybind controls. The menu pauses gameplay and restores its previous pause state when closed. Sound effects use the `SFX` bus; a separate `Music` bus is ready for future tracks. Volumes are written immediately to `user://audio.cfg` and restored when the application starts, including after a complete exit.
+**Escape during gameplay** or the **gear button at the top right** opens the pause
+menu: **Continue**, **Settings**, **Custom Levels**, **Level Editor**, **Discord**,
+**Donate**, and **Back to Main Menu**. **Back** in settings returns to this menu;
+**Continue** resumes gameplay. Settings contains Music and Sound effects sliders
+and keybind controls. Sound effects use the `SFX` bus; a separate `Music` bus is
+ready for future tracks. Volumes are written immediately to `user://audio.cfg`
+and restored when the application starts, including after a complete exit.
 
 Each gameplay action supports **up to three keyboard keys or mouse buttons**. Click a slot, then press its replacement. Delete/Backspace clears the slot; Escape cancels capture. The reset button restores defaults. Keybinds save immediately to `user://keybinds.cfg` and remain intact across level changes and application sessions. Gameplay has no persistent HUD text; contextual recall prompts use the first assigned key, so rebinding Q or R updates their displayed prompts.
 
@@ -44,7 +56,7 @@ The **Level Editor** button to the right of Donate opens the in-game editor menu
 
 The toolbar sets the level width, height, and color. Tiles are 16 by 16 pixels; dimensions are capped to the available area between the toolbar and palette. Reducing dimensions crops the level, and undo restores the previous draft where it fits. **Export** produces a compact `CPE1:` string using packed cell data, the smallest of four lossless compression codecs, and Base64. **Import** validates and loads that string, including its level color. The palette shows the player first and uses the game's object drawings and animated surface shader. Adjacent blocks of the same color merge visually with a shared outline and pivot while editing.
 
-**Play** or Space toggles play testing without changing the draft. Use the usual game controls (W or Up jumps with the default bindings); Space always returns to editing. A reminder above the palette explains the goal during play. Filling every key with its matching block displays the victory popup and returns to editing. **Exit** saves the authored draft to `user://level_editor_draft.cpe`, restores the main game from its temporary save, and deletes that temporary file after a successful restore. The next editor visit restores the saved draft, including its dimensions, objects, and color. Export also lets you keep or share additional levels.
+**Play** or Space toggles play testing without changing the draft. Use the usual game controls (W or Up jumps with the default bindings); Space always returns to editing. A reminder above the palette explains the goal during play. Filling every key with its matching block displays the victory popup and returns to editing. **Exit** saves the authored draft to `user://level_editor_draft.cpe` and returns to the screen that opened the editor. When opened from gameplay, it restores the main game from its temporary save and deletes that temporary file after a successful restore. The next editor visit restores the saved draft, including its dimensions, objects, and color. Export also lets you keep or share additional levels.
 
 **Publish**, immediately left of Exit, requires a test-mode win with no subsequent level changes. An unchanged verified puzzle opens the upload form directly. Otherwise, acknowledge the completion popup with **Okay** to enter test mode; a bottom-left reminder stays visible until you finish or return to editing. Winning that test opens the form automatically. Enter **Puzzle Name** and **Author**, then choose **Back** or **Publish**. Successful publication uploads the authored `CPE2:` string to Convex and starts a five-minute cooldown that survives game restarts. Failed uploads keep the form available for retry. The backend also enforces the cooldown per anonymous installation. See [backend setup](backend/README.md) to deploy the HTTP endpoint to the supplied Convex cloud.
 
@@ -85,6 +97,8 @@ regardless of wording or line breaks. Scene overrides and saved levels no longer
 store extra copies of this message. Both objects expose their dimensions in the Godot Inspector and
 retain their settings in level snapshots. The sixteen-pixel support bar along the bottom links to
 Discord and [Donate](https://ko-fi.com/snugglefox).
+These three bottom buttons stay hidden during the opening dialogue, then slide
+up from below the screen when it finishes. Reduced motion shows them immediately.
 
 Open `scenes/main.tscn`. Select **Walls** and use the TileMap editor to paint the dark gray solid tile. Its TileSet is `assets/walls.tres`, including collision. Drag any reusable object scene from `scenes/` into **Objects**, including `one_way_block.tscn` and `color_trigger.tscn`. The included demo is editable; nothing overwrites your level at runtime.
 
@@ -142,6 +156,15 @@ Surface ShaderMaterials are local to each scene instance, so block/pad/door effe
 ## Validation and maintenance
 
 Run `Godot_v4.7.2-stable_win64.exe --headless --path . --script tools/test_game.gd` for 17 real physics checks: wall collision, push delay/distance, recall, fixed jump height for taps and holds, repeated and mixed pad requirements, door closing/safety, and block gravity.
+
+`tools/test_main_menu.gd` also exercises Escape, the pause menu, settings Back,
+all three editor return destinations, and confirmed save-slot deletion.
+`tools/benchmark_blocks.gd` measures block updates in the main scene over 180
+frames. Block/key proximity queries share a spatial index; resting wall contacts
+skip unnecessary physics queries, and unchanged block visuals and welded
+contours are reused. In the local 106-block benchmark, average block-update time
+fell from 4.67 ms to 3.16 ms (95th percentile: 5.25 ms to 3.71 ms). These timings
+cover block updates rather than the entire rendered frame and vary by hardware.
 
 Run the same command with `tools/test_new_mechanics.gd` for 23 additional checks covering welding, compound collision and movement, recall range/highlights and player exit order, nearest matching portals and blocked destinations, welded teleportation, sphere charging/sliding/recall, nearest platform selection and teleport, one-tile doors, and window stretching.
 

@@ -208,6 +208,14 @@ func run() -> void:
 	watch.go_back()
 	for i in 8: await process_frame
 	check(current_scene==game and not session.overlay.rows.get_child(0).replay_level.is_empty(),"Replay Back returns to the same level's replay list")
+	var escape := InputEventKey.new()
+	escape.keycode=KEY_ESCAPE
+	escape.pressed=true
+	Input.parse_input_event(escape)
+	for i in 3: await process_frame
+	check(not is_instance_valid(session.overlay) and not is_instance_valid(root.get_node("GameMenu").overlay) and not paused,"Escape closes replay selection without opening the game menu")
+	escape.pressed=false
+	Input.parse_input_event(escape)
 	session.show_menu()
 	for i in 3: await process_frame
 	browser=session.overlay.rows.get_child(0)

@@ -63,7 +63,8 @@ func _physics_process(delta: float) -> void:
 		show_recall_prompt = false
 		for actor in get_tree().get_nodes_in_group("blocks")+get_tree().get_nodes_in_group("spheres"):
 			actor.recall_available = false
-			actor.queue_redraw()
+			if actor.has_method("refresh_visual"): actor.refresh_visual()
+			else: actor.queue_redraw()
 		visual.scale = Vector2.ONE
 		visual.rotation = 0
 		update_sprite()
@@ -212,7 +213,9 @@ func update_recall_target() -> Node2D:
 				for member in closest.leader.members: member.recall_available = false
 			else: closest.recall_available = false
 		if action_just_pressed("reset_block"): closest.reset_home()
-	for actor in actors: actor.queue_redraw()
+	for actor in actors:
+		if actor.has_method("refresh_visual"): actor.refresh_visual()
+		else: actor.queue_redraw()
 	queue_redraw()
 	return closest
 func _draw() -> void:

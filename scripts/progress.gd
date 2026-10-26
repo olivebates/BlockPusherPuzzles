@@ -49,7 +49,9 @@ func bind_level(world: Node2D) -> void:
 	map_teleported=false
 	var saved := read_file(save_root+"/current.cps")
 	if saved.is_empty(): saved=read_file(save_root+"/current.cps.previous")
-	if saved.is_empty():
+	# A reused slot keeps its old backups for manual recovery, but starts a
+	# new game instead of automatically loading one of those backups.
+	if saved.is_empty() and not SaveSlots.needs_fresh_start():
 		for backup in list_backups():
 			var candidate := read_file(backup.path)
 			if not candidate.is_empty() and candidate.scene==world.scene_file_path:
@@ -60,7 +62,7 @@ func bind_level(world: Node2D) -> void:
 	var opening := snapshot()
 	if not opening.is_empty(): write_backup("launch",opening)
 	if not dialogues.has("opening"): Dialogue.request_once("opening",StoryLines.OPENING)
-	save_now()
+	if save_now(): SaveSlots.finish_fresh_start()
 func _process(delta: float) -> void:
 	if not enabled or restoring or not is_instance_valid(level) or level!=get_tree().current_scene: return
 	save_elapsed+=delta

@@ -1,6 +1,9 @@
 extends CanvasLayer
 const DISCORD_URL := preload("res://scripts/ending_message.gd").DISCORD_URL
 const DONATE_URL := "https://ko-fi.com/snugglefox"
+var bar: Control
+var waiting_for_opening := true
+var reveal_tween: Tween
 class SupportButton extends Control:
 	var caption := ""
 	var url := ""
@@ -37,10 +40,12 @@ class SupportButton extends Control:
 func _ready() -> void:
 	layer=1100
 	process_mode=Node.PROCESS_MODE_ALWAYS
-	var bar := Control.new()
+	bar=Control.new()
 	bar.name="SupportBar"
 	bar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	bar.offset_top=-16
+	bar.offset_top=0
+	bar.offset_bottom=16
+	bar.hide()
 	add_child(bar)
 	for index in 3:
 		var button := SupportButton.new()
@@ -54,3 +59,25 @@ func _ready() -> void:
 		button.anchor_bottom=1
 		button.clip_contents=true
 		bar.add_child(button)
+
+func _process(_delta: float) -> void:
+	if Dialogue.active and Dialogue.dialogue_id=="opening":
+		if not waiting_for_opening or bar.visible:
+			if reveal_tween and reveal_tween.is_valid(): reveal_tween.kill()
+			waiting_for_opening=true
+			bar.hide()
+			bar.offset_top=0
+			bar.offset_bottom=16
+		return
+	if not waiting_for_opening or Progress.restoring: return
+	if Progress.level!=get_parent() or not Progress.dialogues.has("opening"): return
+	waiting_for_opening=false
+	bar.show()
+	if Juice.reduced_motion:
+		bar.offset_top=-16
+		bar.offset_bottom=0
+		return
+	reveal_tween=create_tween().set_parallel(true)
+	reveal_tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	reveal_tween.tween_property(bar,"offset_top",-16.0,0.45)
+	reveal_tween.tween_property(bar,"offset_bottom",0.0,0.45)

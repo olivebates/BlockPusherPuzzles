@@ -132,8 +132,8 @@ func run() -> void:
 	free_ball.touch(Vector2.DOWN)
 	await frames(35)
 	check(free_ball.position.y>260 and absf(free_ball.position.y-free_rider.position.y-16)<0.5,"Downward circle carries boxes as it descends")
-	check(game.background_color.is_equal_approx(Color(0.6,0.6,0.6,1)),"Background is 40 percent dark")
-	check(game.tile_color.is_equal_approx(Color(0.2,0.2,0.2,1)),"Tiles are 80 percent dark")
+	check(game.background_color.is_equal_approx(HuePalette.DEFAULT_BACKGROUND),"Background retains the game's teal baseline")
+	check(game.tile_color.is_equal_approx(HuePalette.DEFAULT_TILES),"Tiles retain the game's dark teal baseline")
 	var trigger: Area2D = load(LevelData.SCENES[9]).instantiate()
 	trigger.position = Vector2(80,313)
 	trigger.hex_color = "#ff5522"
@@ -142,7 +142,7 @@ func run() -> void:
 	check(not trigger.visible and trigger.monitoring,"Color trigger is invisible in game but continues detecting touches")
 	player.position = trigger.position
 	await frames(30)
-	check(game.background_color.s>0 and absf(game.background_color.v-0.6)<0.001 and absf(game.tile_color.v-0.2)<0.001,"Invisible color trigger preserves the requested darkness levels")
+	check(game.background_color.is_equal_approx(HuePalette.DEFAULT_BACKGROUND) and game.tile_color.is_equal_approx(HuePalette.DEFAULT_TILES) and is_equal_approx(game.hue_shift,HuePalette.hue_offset(trigger.selected_color())),"Invisible color trigger changes the palette while preserving base colors")
 	await frames(30)
 	current_scene = null
 	game.queue_free()

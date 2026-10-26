@@ -46,21 +46,21 @@ func _ready() -> void:
 			refresh_bindings()
 			menu_open = false
 			get_tree().paused = was_paused)
+	menu.visibility_changed.connect(func():
+		if not menu.visible: GameMenu.settings_closed(self))
 	var rows := VBoxContainer.new()
 	menu.add_child(rows)
 	var header := HBoxContainer.new()
 	header.alignment = BoxContainer.ALIGNMENT_END
 	rows.add_child(header)
-	main_menu_button=LevelEditorUI.button("Main Menu",func():
-		menu.hide()
-		SaveSlots.return_to_menu())
+	main_menu_button=LevelEditorUI.button("Back",func(): GameMenu.back_from_settings(self))
 	header.add_child(main_menu_button)
 	var header_space := Control.new()
 	header_space.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	header.add_child(header_space)
 	var close := Button.new()
 	close.icon = load("res://assets/settings_close.svg")
-	close.pressed.connect(menu.hide)
+	close.pressed.connect(func(): GameMenu.back_from_settings(self))
 	header.add_child(close)
 	var audio_rows := make_group(rows)
 	for bus_name in ["Music","SFX"]:
@@ -160,7 +160,7 @@ func _ready() -> void:
 	menu.window_input.connect(capture_binding)
 	refresh_bindings()
 	rows.add_theme_constant_override("separation",12)
-	gear.pressed.connect(open_settings)
+	gear.pressed.connect(GameMenu.open_menu)
 
 func make_group(parent: VBoxContainer) -> VBoxContainer:
 	var panel := PanelContainer.new()
@@ -205,6 +205,7 @@ func confirm_delete() -> void:
 		call_deferred("show_delete_confirmation")
 	else:
 		delete_stage=0
+		GameMenu.settings_owner=null
 		menu.hide()
 		Progress.call_deferred("delete_progress")
 func refresh_bindings() -> void:
@@ -221,7 +222,7 @@ func apply_colors() -> void:
 	var level := get_tree().current_scene
 	if not level: return
 	var playing := Progress.enabled and is_instance_valid(Progress.level)
-	main_menu_button.visible=not level.is_in_group("main_menu")
+	main_menu_button.visible=true
 	delete_button.disabled=not playing
 	backup_picker.disabled=not playing
 	var color: Color=level.hue_palette.map_color(level.background_color) if "hue_palette" in level else HuePalette.DEFAULT_BACKGROUND

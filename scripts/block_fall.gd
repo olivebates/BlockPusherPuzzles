@@ -11,35 +11,43 @@ static func axis_distance(body: CharacterBody2D, motion: Vector2, ignored: Array
 	var sign_axis := signf(amount)
 	var distance := absf(amount)
 	var result := distance
-	var excluded: Array[RID]=body.body_rids()
-	for other in ignored:
-		if not excluded.has(other.get_rid()): excluded.append(other.get_rid())
-	for other in body.get_collision_exceptions():
-		if not excluded.has(other.get_rid()): excluded.append(other.get_rid())
+	var excluded: Array[RID]=[]
+	var scene := body.get_tree().current_scene
+	var walls := scene.get_node_or_null("Walls") as TileMapLayer if scene else null
 	for collider in PuzzlePhysics.colliders(body):
 		var rect := SupportCarry.bounds(collider)
 		var swept := rect.merge(Rect2(rect.position+motion,rect.size)).grow(EPSILON)
-		var query := PhysicsShapeQueryParameters2D.new()
-		var shape := RectangleShape2D.new()
-		shape.size=swept.size
-		query.shape=shape
-		query.transform=Transform2D(0,swept.get_center())
-		query.collision_mask=body.collision_mask if mask<0 else mask
-		query.exclude=excluded
 		var maps_seen := {}
 		# Tile edits are visible immediately, before their physics quadrants
 		# rebuild. Inspect the authored wall cells as well as native query hits.
-		var scene := body.get_tree().current_scene
-		var walls := scene.get_node_or_null("Walls") as TileMapLayer if scene else null
 		if walls:
 			result=minf(result,map_distance(walls,rect,swept,distance,horizontal,sign_axis))
+			if result==0: return 0
 			maps_seen[walls]=true
+		# Resting wall contact is already the nearest possible hit. Allocate
+		# and run a native query only when a dynamic obstacle could matter.
+		if excluded.is_empty():
+			excluded=body.body_rids()
+			for other in ignored:
+				if not excluded.has(other.get_rid()): excluded.append(other.get_rid())
+			for other in body.get_collision_exceptions():
+				if not excluded.has(other.get_rid()): excluded.append(other.get_rid())
+		var query: PhysicsShapeQueryParameters2D=body.get_meta("_fall_query") if body.has_meta("_fall_query") else null
+		if not query:
+			query=PhysicsShapeQueryParameters2D.new()
+			query.shape=RectangleShape2D.new()
+			body.set_meta("_fall_query",query)
+		query.shape.size=swept.size
+		query.transform=Transform2D(0,swept.get_center())
+		query.collision_mask=body.collision_mask if mask<0 else mask
+		query.exclude=excluded
 		for hit in body.get_world_2d().direct_space_state.intersect_shape(query,128):
 			var obstacle: Node2D=hit.collider
 			if obstacle is TileMapLayer:
 				if maps_seen.has(obstacle): continue
 				maps_seen[obstacle]=true
 				result=minf(result,map_distance(obstacle,rect,swept,distance,horizontal,sign_axis))
+				if result==0: return 0
 			else:
 				for other in PuzzlePhysics.colliders(obstacle):
 					if other.one_way_collision and (horizontal or sign_axis<0): continue
@@ -65,6 +73,7 @@ static func map_distance(walls: TileMapLayer, rect: Rect2, swept: Rect2, distanc
 			if walls.get_cell_source_id(cell)<0: continue
 			var center := walls.to_global(walls.map_to_local(cell))
 			result=minf(result,rect_distance(rect,Rect2(center-Vector2(8,8),Vector2(16,16)),distance,horizontal,direction))
+			if result==0: return 0
 	return result
 static func rect_distance(box: Rect2, obstacle: Rect2, distance: float, horizontal: bool, direction: float) -> float:
 	var overlap := minf(box.end.y,obstacle.end.y)-maxf(box.position.y,obstacle.position.y) if horizontal else minf(box.end.x,obstacle.end.x)-maxf(box.position.x,obstacle.position.x)
