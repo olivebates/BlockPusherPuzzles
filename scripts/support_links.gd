@@ -4,6 +4,7 @@ const DONATE_URL := "https://ko-fi.com/snugglefox"
 class SupportButton extends Control:
 	var caption := ""
 	var url := ""
+	var action: Callable
 	var hovered := false
 	var world: Node2D
 	var background_color := Color.BLACK
@@ -24,7 +25,8 @@ class SupportButton extends Control:
 	func _gui_input(event: InputEvent) -> void:
 		if event is InputEventMouseButton and event.button_index==MOUSE_BUTTON_LEFT and event.pressed:
 			accept_event()
-			OS.shell_open(url)
+			if action.is_valid(): action.call()
+			else: OS.shell_open(url)
 	func _draw() -> void:
 		draw_rect(Rect2(Vector2.ZERO,size),background_color.lightened(0.12) if hovered else background_color)
 		draw_rect(Rect2(Vector2.ONE*0.5,size-Vector2.ONE),border_color,false,1)
@@ -40,14 +42,15 @@ func _ready() -> void:
 	bar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	bar.offset_top=-16
 	add_child(bar)
-	for index in 2:
+	for index in 3:
 		var button := SupportButton.new()
-		button.name="Discord" if index==0 else "Donate"
+		button.name=["Discord","Donate","Level Editor"][index]
 		button.caption=button.name
 		button.world=get_parent()
-		button.url=DISCORD_URL if index==0 else DONATE_URL
-		button.anchor_left=index*0.5
-		button.anchor_right=(index+1)*0.5
+		if index==2: button.action=LevelEditorSession.open_menu
+		else: button.url=DISCORD_URL if index==0 else DONATE_URL
+		button.anchor_left=index/3.0
+		button.anchor_right=(index+1)/3.0
 		button.anchor_bottom=1
 		button.clip_contents=true
 		bar.add_child(button)

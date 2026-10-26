@@ -70,14 +70,6 @@ func run() -> void:
 	discord._process(0)
 	var game_color: Color=game.hue_palette.map_color(game.background_color)
 	check(discord.background_color.is_equal_approx(game_color.darkened(0.2)) and discord.background_color!=theme_before and discord.font_color!=Color.WHITE,"Support button backgrounds and font colors follow the game palette")
-	var editor: Node2D=load("res://scripts/level_editor.gd").new()
-	game.add_child(editor)
-	await editor.open_blank()
-	editor.selected=21
-	editor.paint(Vector2(200,200))
-	editor.selected=22
-	editor.paint(Vector2(216,200))
-	check(editor.data.objects.size()==2 and editor.data.objects[0][0]==21 and editor.data.objects[1][0]==22 and LevelData.valid(editor.data,false),"The editor palette can place and save both new completion objects")
 	paused=false
 	current_scene=null
 	game.queue_free()

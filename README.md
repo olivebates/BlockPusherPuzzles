@@ -13,42 +13,35 @@ A Godot 4.7 2D platformer and color-block puzzle engine, validated with the incl
 | Teleport player to nearest previously touched recall platform | Q |
 | Restart level | Enter |
 | Toggle gentle camera / particles | M |
-| Open / leave independent level editor | Hold Shift + Z + P |
-
-## In-game level editor
-
-Hold **Shift + Z + P** together to enter `scenes/level_editor.tscn`. This is an independent scene that can also be run directly with F6. Every new editor session starts with a **clear board**, separate from the demo game. Its default dimensions fit the visible drawing area between the toolbar and palette. Build mode pauses simulation. The bottom palette contains Wall, Player, Block, Key tile, Door, Portal, Sphere, Platform, One-way, Theme, and Erase. Select an item, then **left-click or drag** on the grid to place it. **Right-click or drag** erases. Placing a player moves the single player spawn. Different object types can share a cell, allowing blocks on key tiles or portals.
-
-Use the palette's **Color**, **Symbol**, **ID**, and **Door needs** controls before placing the corresponding objects. Select multiple door colors with the checkboxes. Matching keys and doors need the same ID. Adjacent same-color blocks weld when play starts.
-
-**Columns / Rows** control level dimensions in 16px tile units, up to 512 × 512. **Snap px** controls object placement spacing from 1–64px; wall collision tiles remain 16px. Resizing the bounds preserves placed objects instead of deleting them. Use the middle mouse button to pan, the wheel to zoom, or WASD / arrows to move the build view. Click the grid after typing in a field to leave text entry.
-
-Press **Space** to switch between Build and Playtest, or use the mode button. Every test starts from the authored layout, including fresh spawns and welds. Returning to Build preserves your layout and build camera rather than capturing moved puzzle pieces. Enter restarts a custom test level without losing its layout. Close or press Shift+Z+P to return to the demo game. **Save before leaving the editor**; reentering starts another blank board.
-
-**Save** and **Load** are at the top left and open file dialogs for `.cpplevel` files. Saves contain compact JSON tuples compressed with whichever of Zstandard, FastLZ, Deflate, or Gzip produces the smallest result. A small versioned binary header records the codec and decompressed length; no Base64 overhead is added. Loading decompresses, validates, and restores grid dimensions, object positions, colors, link IDs, door requirements, portal symbols, and block/sphere timing settings. Invalid files leave your current layout unchanged. Empty or unfinished boards can be saved; playtesting requires exactly one player. Older level files retain their links because the existing link field is now read as `id`.
 
 ## Settings
 
-Color changers expose **Cycle Hue** in the Godot Inspector and the in-game
-editor. When enabled, touching the changer starts a continuous 12-second hue
+Color changers expose **Cycle Hue** in the Godot Inspector.
+When enabled, touching the changer starts a continuous 12-second hue
 loop. Touch a changer with Cycle Hue disabled to return to a fixed color.
 
 The **gear button at the top right** opens Music and Sound effects sliders and keybind controls. The menu pauses gameplay and restores its previous pause state when closed. Sound effects use the `SFX` bus; a separate `Music` bus is ready for future tracks. Volumes are written immediately to `user://audio.cfg` and restored when the application starts, including after a complete exit.
 
 Each gameplay action supports **up to three keyboard keys or mouse buttons**. Click a slot, then press its replacement. Delete/Backspace clears the slot; Escape cancels capture. The reset button restores defaults. Keybinds save immediately to `user://keybinds.cfg` and remain intact across level changes and application sessions. Gameplay has no persistent HUD text; contextual recall prompts use the first assigned key, so rebinding Q or R updates their displayed prompts.
 
-Every reusable object scene now includes an **EditorIcon** sprite using a generated SVG identification icon from `assets/editor/`. These sprites appear in the Godot editor and as palette/build previews; they stay hidden during normal gameplay. `tools/install_editor_icons.gd` can reinstall them if you replace the object scenes. The block's small white inner rectangle appears only while settled on a matching key tile.
+Every reusable object scene now includes an **EditorIcon** sprite using a generated SVG identification icon from `assets/editor/`. These sprites appear in the Godot editor; they stay hidden during normal gameplay. `tools/install_editor_icons.gd` can reinstall them if you replace the object scenes. The block's small white inner rectangle appears only while settled on a matching key tile.
 
 ## Build your level
 
-The **Fireworks area** palette object creates a dark gray backdrop and launches
+The **Level Editor** button to the right of Donate opens the in-game editor menu after a one-time spoiler warning. **Make Levels** suspends the main game and writes its progress to `user://level_editor_session.tmp.cps`. The editor palette includes walls, all four block colors and matching keys, both rotators, and the player. Left click or drag to place, right click or drag to erase, and Ctrl+Z to undo. Placing another player moves the existing spawn. Blocks can share a tile with a key or rotator.
+
+The toolbar sets the level width, height, and color. Tiles are 16 by 16 pixels; dimensions are capped to the available area between the toolbar and palette. Reducing dimensions crops the level, and undo restores the previous draft where it fits. **Export** produces a compact `CPE1:` string using packed cell data, the smallest of four lossless compression codecs, and Base64. **Import** validates and loads that string, including its level color. The palette shows the player first and uses the game's object drawings and animated surface shader. Adjacent blocks of the same color merge visually with a shared outline and pivot while editing.
+
+**Play** or Space toggles play testing without changing the draft. Use the usual game controls (W or Up jumps with the default bindings); Space always returns to editing. A reminder above the palette explains the goal during play. Filling every key with its matching block displays the victory popup and returns to editing. **Exit**, immediately to the right of Play, saves the authored draft to `user://level_editor_draft.cpe`, restores the main game from its temporary save, and deletes that temporary file after a successful restore. The next editor visit restores the saved draft, including its dimensions, objects, and color. Export also lets you keep or share additional levels.
+
+The **Fireworks area** (`celebration_area.tscn`) object creates a dark gray backdrop and launches
 fireworks from the bottom of the screen while the player is inside. Place the
 separate **Completion text** object over it for the completion message and clickable
 Discord invite. Edit the wording only in `scripts/ending_message.gd`: its named
 title, victory, request, Discord URL, and closing fields keep their formatting
 regardless of wording or line breaks. Scene overrides and saved levels no longer
 store extra copies of this message. Both objects expose their dimensions in the Godot Inspector and
-survive custom level saves. The sixteen-pixel support bar along the bottom links to
+retain their settings in level snapshots. The sixteen-pixel support bar along the bottom links to
 Discord and [Donate](https://ko-fi.com/snugglefox).
 
 Open `scenes/main.tscn`. Select **Walls** and use the TileMap editor to paint the dark gray solid tile. Its TileSet is `assets/walls.tres`, including collision. Drag any reusable object scene from `scenes/` into **Objects**, including `one_way_block.tscn` and `color_trigger.tscn`. The included demo is editable; nothing overwrites your level at runtime.
@@ -71,11 +64,11 @@ Choose each block/pad's **Block Color** dropdown: Cyan, Coral, Gold, Lilac. Colo
 
 **Recall prompts:** standing inside a block/circle's original spawn displays **R above the player at 40% opacity**, in the object's color (white for spheres). Touching a box whose welded body is blocked on either horizontal side also displays the same prompt. The collision check excludes the player so ordinary contact does not count as a blocked side. Prompts follow remapped recall keys.
 
-**One-way blocks:** `one_way_block.tscn` uses Godot's one-way collision. The player can jump through it from underneath and stand on its upper surface. Use the **One-way** palette item for placement.
+**One-way blocks:** `one_way_block.tscn` uses Godot's one-way collision. The player can jump through it from underneath and stand on its upper surface.
 
-**Color triggers:** `color_trigger.tscn` is an invisible, non-solid trigger in gameplay. Its diamond/icon remains visible in the Godot editor and build palette. Touching it changes background and tile hue. Its exported **Hex Color** accepts a hex code such as `#9955ff`; when empty or invalid, the exported **Color** uses Godot's native color picker. In the in-game editor, choose **Theme** and set Theme hex or the adjacent color picker. Background and tile brightness remain 60% and 20% while transitioning smoothly to the selected hue. One-way blocks receive the tile tint too. Both objects and trigger color settings survive compressed level saves.
+**Color triggers:** `color_trigger.tscn` is an invisible, non-solid trigger in gameplay. Its diamond/icon remains visible in the Godot editor. Touching it changes background and tile hue. Its exported **Hex Color** accepts a hex code such as `#9955ff`; when empty or invalid, the exported **Color** uses Godot's native color picker. Background and tile brightness remain 60% and 20% while transitioning smoothly to the selected hue. One-way blocks receive the tile tint too. Both objects and trigger color settings survive compressed level saves.
 
-For each door, select **Required Colors** (multiple checkboxes) and set its exported **id** string. Give matching key tiles the same exported **id**. Every key of each requested color with that ID must be filled by that color, and at least one key must exist for every requested color. Keys with different IDs do not affect that door. Pads use a 2px center tolerance and wait until the block finishes sliding. A missing color never opens a door. Multiple doors may share an ID. Faint gray dotted lines connect linked keys to their doors, using the same style as the player/platform guide; they render behind tiles and objects in gameplay and the build view. Doors use a recessed metal gate frame with retracting vertical bars in the required colors. They have no white center line. Gates close when a required key empties, waiting for actors to leave the doorway before closing.
+For each door, select **Required Colors** (multiple checkboxes) and set its exported **id** string. Give matching key tiles the same exported **id**. Every key of each requested color with that ID must be filled by that color, and at least one key must exist for every requested color. Keys with different IDs do not affect that door. Pads use a 2px center tolerance and wait until the block finishes sliding. A missing color never opens a door. Multiple doors may share an ID. Faint gray dotted lines connect linked keys to their doors, using the same style as the player/platform guide; they render behind tiles and objects in gameplay. Doors use a recessed metal gate frame with retracting vertical bars in the required colors. They have no white center line. Gates close when a required key empties, waiting for actors to leave the doorway before closing.
 
 The demo's A door needs **two Cyan pads AND one Coral pad**. B needs one Gold pad. It also includes an adjacent Lilac pair, a floating white sphere, two Square portals, and two recall platforms. All four block colors and all four portal symbols are available for new levels. The far end has one- and two-tile steps for jump practice. Falling below the level recalls the player or block. Enter restores the entire puzzle.
 
@@ -110,14 +103,12 @@ Run `Godot_v4.7.2-stable_win64.exe --headless --path . --script tools/test_game.
 
 Run the same command with `tools/test_new_mechanics.gd` for 23 additional checks covering welding, compound collision and movement, recall range/highlights and player exit order, nearest matching portals and blocked destinations, welded teleportation, sphere charging/sliding/recall, nearest platform selection and teleport, one-tile doors, and window stretching.
 
-Use `tools/test_level_editor.gd` for 29 additional checks: a clear independent board, defaults fitted to its usable area, blank saves, hidden identification sprites, the Shift+Z+P shortcut, grid placement/erasing, snapping, the new palette objects and color fields, compressed file round trips, file validation, board dimensions, and repeatable Space switching without accidental jumping.
-
-Use `tools/test_revision.gd` for 27 checks covering the supplied PNG and horizontal flipping, repeated live occupied-spawn recall, standing recalls without launches, audio buses/menu/volume, the independent editor, ID-based door logic and guide links, and the empty gameplay HUD.
+Use `tools/test_revision.gd` for checks covering the supplied PNG and horizontal flipping, repeated live occupied-spawn recall, standing recalls without launches, audio buses/menu/volume, the removed editor shortcut, ID-based door logic and guide links, and the empty gameplay HUD.
 
 Use `tools/test_new_controls.gd` for 27 additional checks covering gray defaults, fixed jump height, the unrestricted camera, touch activation and floor snapping, recall prompts, one-way physics, trigger hue changes, new object serialization, binding capture/clearing, three-slot limits, and saved keybinds.
 
-Use `tools/test_stacks.gd` for 19 checks covering recursive carrying, left/right pushes, welded and overhanging riders, circle support geometry, horizontal/up/down movement, overhead obstructions, restored collision exclusions, darkness levels, and invisible color triggers. **All six suites total 142 checks.** Physics tests use `tools/test_world.gd` as an isolated fixture so changing the demo layout does not change the test results.
+Use `tools/test_stacks.gd` for 19 checks covering recursive carrying, left/right pushes, welded and overhanging riders, circle support geometry, horizontal/up/down movement, overhead obstructions, restored collision exclusions, darkness levels, and invisible color triggers. Physics tests use `tools/test_world.gd` as an isolated fixture so changing the demo layout does not change the test results.
 
 `tools/test_audio_persistence.gd -- --write` writes test volumes and three recall keybinds; running the same script again without `--write` verifies them in a new process. Use an isolated APPDATA directory for this test to keep personal preferences unchanged.
 
-`tools/build_level.gd` creates the reusable scenes, TileSet, and sample level. **It overwrites these assets**, so use only when deliberately rebuilding the demo. Normal editing does not need it. `tools/capture.gd` saves a gameplay preview; add `-- --build` for the blank editor or `-- --audio` for the audio menu.
+`tools/build_level.gd` creates the reusable scenes, TileSet, and sample level. **It overwrites these assets**, so use only when deliberately rebuilding the demo. Normal editing does not need it. `tools/capture.gd` saves a gameplay preview; add `-- --audio` for the audio menu.

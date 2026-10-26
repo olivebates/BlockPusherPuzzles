@@ -263,14 +263,7 @@ func _draw() -> void:
 func draw_shape(canvas: CanvasItem) -> void:
 	var alpha := 0.28 if cooldown>0 or countdown>0.001 else 1.0
 	var color := Color(1,0.83,0.2,alpha)
-	canvas.draw_rect(Rect2(-7.5,-7.5,15,15),color,false,1)
-	var points := PackedVector2Array()
-	var direction := 1.0 if clockwise else -1.0
-	for i in 29: points.append(Vector2.from_angle(-PI/2+direction*(0.25+float(i)/28*(TAU-0.8)))*5.5)
-	canvas.draw_polyline(points,color,1.2,true)
-	var tip := points[-1]
-	var tangent := Vector2.from_angle(-PI/2+direction*(TAU-0.55)+direction*PI/2)
-	canvas.draw_colored_polygon(PackedVector2Array([tip+tangent*1.5,tip-tangent*2+tangent.orthogonal()*2,tip-tangent*2-tangent.orthogonal()*2]),color)
+	preload("res://scripts/puzzle_art.gd").draw_rotator(canvas,clockwise,color)
 	if countdown>0.001: canvas.draw_arc(Vector2.ZERO,6.8,-PI/2,-PI/2+TAU*countdown/3,48,Color(1,0.83,0.2,0.7),1,true)
 	if failure_flash>0:
 		var red := Color(1,0.12,0.15,minf(1,failure_flash*4))

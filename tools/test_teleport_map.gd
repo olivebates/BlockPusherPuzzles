@@ -134,7 +134,7 @@ func run() -> void:
 	await frames(3)
 	check(player.map_hint()=="TAB - Teleport","A trigger after an earlier map visit uses the expanded tutorial hint")
 	var level_data := LevelData.decode(LevelData.encode(LevelData.capture(game)))
-	check(level_data.objects.any(func(item): return int(item[0])==17),"Map triggers survive compressed editor level save/load")
+	check(level_data.objects.any(func(item): return int(item[0])==17),"Map triggers survive compressed level snapshot save/load")
 	root.get_node("Dialogue").begin("",StoryLines.OPENING)
 	check(not map.open_map() and not map.active,"The map cannot interrupt a dialogue")
 	root.get_node("Dialogue").stop()

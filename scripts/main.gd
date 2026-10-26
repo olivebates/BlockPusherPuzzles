@@ -1,5 +1,4 @@
 extends Node2D
-@export var open_as_editor := false
 var elapsed := 0.0
 var background_color := HuePalette.DEFAULT_BACKGROUND
 var tile_color := HuePalette.DEFAULT_TILES
@@ -23,7 +22,7 @@ func _ready() -> void:
 	if main_scene.begins_with("uid://"):
 		var uid := ResourceUID.text_to_id(main_scene)
 		if ResourceUID.has_id(uid): main_scene=ResourceUID.get_id_path(uid)
-	if scene_file_path==main_scene and not open_as_editor: Progress.call_deferred("bind_level",self)
+	if scene_file_path==main_scene: Progress.call_deferred("bind_level",self)
 	initial_background = background_color
 	initial_tiles = tile_color
 	call_deferred("remember_level")
@@ -89,17 +88,6 @@ func _ready() -> void:
 	map.name="TeleportMap"
 	map.set_script(load("res://scripts/teleport_map.gd"))
 	add_child(map)
-	if open_as_editor:
-		var editor := Node2D.new()
-		editor.name = "LevelEditor"
-		editor.set_script(load("res://scripts/level_editor.gd"))
-		add_child(editor)
-		editor.call_deferred("open_blank")
-	else:
-		var shortcut := Node.new()
-		shortcut.name = "EditorShortcut"
-		shortcut.set_script(load("res://scripts/editor_shortcut.gd"))
-		add_child(shortcut)
 func setup_inputs() -> void:
 	# The autoload installs saved bindings once, before any scene starts.
 	pass
@@ -122,8 +110,6 @@ func _notification(what: int) -> void:
 		reset_keys.clear()
 		reset_latched = false
 func reset_level() -> bool:
-	var editor := get_node_or_null("LevelEditor")
-	if editor and editor.building: return false
 	var player := get_tree().get_first_node_in_group("player") as CharacterBody2D
 	if not player or not LevelData.valid(initial_level): return false
 	var point := player.global_position

@@ -1,6 +1,6 @@
 Pip is the player fox; Sunny is the yellow NPC fox.
 
-The new objects are in the level editor palette and have individual scenes:
+The story objects have individual scenes:
 `large_door.tscn`, `collectible.tscn`, `indicator.tscn`, `npc_fox.tscn`, and
 `dialogue_trigger.tscn`. `large_door_encounter.tscn` groups Sunny, a door, three
 indicators, and three pickups. `story_demo.tscn` is a playable example; the
@@ -28,7 +28,7 @@ TAB opens Map Teleport. WASD or arrow keys select a visited platform; Space
 teleports to it, including off-screen destinations. TAB or a click outside the
 panel closes the map. The world pauses while it is open. Each wall tile is one
 pixel in the underlying nearest-filtered map texture, which fits the panel.
-The Map hint object in the editor palette is a one-time shared tutorial trigger:
+The Map hint object (`map_trigger.tscn`) is a one-time shared tutorial trigger:
 it shows TAB above Pip, changes to TAB - Teleport after a map visit without a
 teleport, and disappears permanently after the first successful map teleport.
 These tutorial flags are included in progress saves and backups.

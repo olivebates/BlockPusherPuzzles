@@ -21,6 +21,7 @@ Juice="*res://scripts/juice.gd"
 InputBindings="*res://scripts/input_bindings.gd"
 Progress="*res://scripts/progress.gd"
 Dialogue="*res://scripts/dialogue.gd"
+LevelEditorSession="*res://scripts/level_editor_session.gd"
 
 [display]
 

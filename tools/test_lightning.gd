@@ -67,7 +67,7 @@ func run() -> void:
 	var entry: Array=[]
 	for item in data.objects:
 		if int(item[0])==18: entry=item
-	check(entry.size()==7 and int(entry[3])==1 and int(entry[4])==24 and Color.html(entry[5])==emitter.beam_color and not entry[6],"Compressed editor saves retain lightning direction, range, color, and enabled state")
+	check(entry.size()==7 and int(entry[3])==1 and int(entry[4])==24 and Color.html(entry[5])==emitter.beam_color and not entry[6],"Compressed level snapshots retain lightning direction, range, color, and enabled state")
 	check(LevelData.apply(game,data),"Levels containing lightning emitters load successfully")
 	await frames(3)
 	var restored: Node2D=get_first_node_in_group("lightning_emitters")

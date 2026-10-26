@@ -129,11 +129,10 @@ func side_blocked() -> bool:
 func _draw() -> void:
 	var color := PuzzlePalette.color_for(block_color)
 	if recall_available: color = color.lightened(0.42)
-	draw_rect(Rect2(-8,-8,16,16),color.darkened(0.35))
+	preload("res://scripts/puzzle_art.gd").draw_block(self,color,on_key_tile)
 	if Engine.is_editor_hint():
 		draw_rect(Rect2(-7.5,-7.5,15,15),color,false,1)
 		WeldOutline.draw_pivot(self,Vector2.ZERO)
-	if on_key_tile: draw_rect(Rect2(-5,-5,10,10),Color.WHITE,false,0.6)
 	var owner_charge: float = leader.charge if is_instance_valid(leader) else charge
 	if owner_charge > 0 and is_instance_valid(leader) and leader.push_contact==self: draw_circle(Vector2.ZERO,10*maxf(0,1-owner_charge/leader.push_delay),Color(color,0.65))
 	if flash > 0: draw_rect(Rect2(-8,-8,16,16),Color(1,1,1,flash*0.6))

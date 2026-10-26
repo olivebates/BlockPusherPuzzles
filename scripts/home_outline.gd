@@ -32,4 +32,6 @@ func _draw() -> void:
 		for segment in 4:
 			var a := Vector2(-7+segment*4,-7).rotated(side*PI/2)
 			var b := Vector2(-5+segment*4,-7).rotated(side*PI/2)
-			draw_line(a,b,color,0.8)
+			# At the editor's 1x play scale, subpixel lines on integer coordinates
+			# can miss every pixel center. Antialiasing keeps the dashes visible.
+			draw_line(a,b,color,0.8,true)

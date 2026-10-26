@@ -1,397 +1,511 @@
 extends Node2D
-## Always processes while gameplay is paused. Authored data never comes from a test run.
-var active := false
-var building := false
-var data: Dictionary = {}
-var selected := 0
-var selected_color := 0
-var selected_symbol := 0
-var lightning_direction := 0
-var link_id := "A"
-var trigger_hex := ""
-var trigger_color := Color("89b9d1")
-var trigger_cycle_hue := false
-var trigger_background := Color(0.6,0.6,0.6,1)
-var trigger_tiles := Color(0.2,0.2,0.2,1)
-var required := 1
-var editor_camera: Camera2D
-var ui: CanvasLayer
-var top: PanelContainer
-var bottom: PanelContainer
-var state_label: Label
-var message: Label
-var mode_button: Button
-var file_dialog: FileDialog
-var dimensions: Array[SpinBox] = []
-var palette_buttons: Array[Button] = []
-var textures: Array[Texture2D] = []
-var last_cell := Vector2i(-999999,-999999)
-var chord_latched := false
-var chord_keys := {}
-@onready var level: Node2D = get_parent()
+const TOP := 48
+const BOTTOM := 88
+var draft_path := "user://level_editor_draft.cpe"
+var background_color := HuePalette.DEFAULT_BACKGROUND
+var data := {"v":1,"grid":[40,20,16],"color":"", "tiles":[],"objects":[]}
+var selected_kind := 0
+var selected_hue := 0
+var playing := false
+var board: Board
+var width_input: SpinBox
+var height_input: SpinBox
+var color_button: Button
+var play_button: Button
+var import_button: Button
+var export_button: Button
+var ui: Control
+var palette: HBoxContainer
+var palette_buttons: Array[Button]=[]
+var popup: Control
+var play_view: SubViewportContainer
+var play_viewport: SubViewport
+var world: Node2D
+var updating := false
+var painting := false
+var erase := false
+var last_cell := Vector2i(-1,-1)
+var history: Array[Dictionary]=[]
+var stroke_saved := false
+var play_frames := 0
+var objective: Label
+
+class Board extends Control:
+	var editor: Node2D
+	var content: Node2D
+	var ghost: Node2D
+	func _ready() -> void:
+		content=Node2D.new()
+		add_child(content)
+	func rebuild_visuals() -> void:
+		for child in content.get_children():
+			content.remove_child(child)
+			child.queue_free()
+		for tile in editor.data.tiles:
+			var visual := LevelEditorIcons.create(0,0,editor.background_color)
+			visual.position=Vector2(tile[0],tile[1])*16+Vector2(8,8)
+			content.add_child(visual)
+		var keys := {}
+		for item in editor.data.objects:
+			if item[0]==2: continue
+			var hue: int=int(item[3]) if item[0]==3 else 0
+			var visual := LevelEditorIcons.create(item[0],hue,editor.background_color)
+			visual.position=Vector2(item[1],item[2])
+			visual.z_index=4 if item[0] in [10,11] else 3 if item[0]==1 else 0
+			content.add_child(visual)
+			if item[0]==3: keys[visual.position]=hue
+		for component in LevelEditorIcons.block_components(editor.data.objects):
+			var group := LevelEditorIcons.block_group(component.points,component.hue,keys)
+			group.z_index=1
+			content.add_child(group)
+	func refresh_ghost() -> void:
+		if is_instance_valid(ghost):
+			remove_child(ghost)
+			ghost.queue_free()
+		ghost=LevelEditorIcons.create(editor.selected_kind,editor.selected_hue,editor.background_color)
+		ghost.modulate.a=0.45
+		ghost.z_index=10
+		add_child(ghost)
+	func _process(_delta: float) -> void:
+		if not is_instance_valid(ghost): return
+		var mouse := get_local_mouse_position()
+		ghost.visible=is_visible_in_tree() and Rect2(Vector2.ZERO,size).has_point(mouse) and not is_instance_valid(editor.popup)
+		ghost.position=(mouse/16).floor()*16+Vector2(8,8)
+	func _draw() -> void:
+		draw_rect(Rect2(Vector2.ZERO,size),editor.background_color)
+		for x in range(0,int(size.x)+1,16): draw_line(Vector2(x,0),Vector2(x,size.y),Color(1,1,1,0.09))
+		for y in range(0,int(size.y)+1,16): draw_line(Vector2(0,y),Vector2(size.x,y),Color(1,1,1,0.09))
+		var mouse := get_local_mouse_position()
+		if Rect2(Vector2.ZERO,size).has_point(mouse) and not is_instance_valid(editor.popup):
+			var rect := Rect2((mouse/16).floor()*16,Vector2(16,16))
+			draw_rect(rect.grow(-0.5),Color.WHITE,false,1)
+	func _gui_input(event: InputEvent) -> void:
+		if editor.playing or is_instance_valid(editor.popup): return
+		if event is InputEventMouseButton and event.button_index in [MOUSE_BUTTON_LEFT,MOUSE_BUTTON_RIGHT]:
+			accept_event()
+			editor.painting=event.pressed
+			editor.erase=event.button_index==MOUSE_BUTTON_RIGHT or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+			editor.last_cell=Vector2i(-1,-1)
+			editor.stroke_saved=false
+			if event.pressed: editor.paint_at(Vector2i((get_local_mouse_position()/16).floor()))
+		elif event is InputEventMouseMotion:
+			queue_redraw()
+			if editor.painting:
+				editor.erase=Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+				editor.paint_at(Vector2i((get_local_mouse_position()/16).floor()))
+
 func _ready() -> void:
-	process_mode = Node.PROCESS_MODE_ALWAYS
-	z_index = 30
-	for icon in LevelData.ICONS: textures.append(load("res://assets/editor/"+icon+".svg"))
-	editor_camera = Camera2D.new()
-	editor_camera.enabled = false
-	add_child(editor_camera)
-	make_ui()
-func label(text: String, parent: Node) -> Label:
-	var node := Label.new()
-	node.text = text
-	parent.add_child(node)
-	return node
-func button(text: String, parent: Node, callback: Callable) -> Button:
-	var node := Button.new()
-	node.text = text
-	node.focus_mode = Control.FOCUS_NONE
-	node.pressed.connect(callback)
-	parent.add_child(node)
-	return node
-func make_ui() -> void:
-	ui = CanvasLayer.new()
-	ui.layer = 50
+	process_mode=Node.PROCESS_MODE_ALWAYS
+	ui=Control.new()
+	ui.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	add_child(ui)
-	top = PanelContainer.new()
+	var top := PanelContainer.new()
+	top.name="Toolbar"
 	top.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	top.offset_bottom = 82
+	top.offset_bottom=TOP
 	ui.add_child(top)
-	var top_rows := VBoxContainer.new()
-	top.add_child(top_rows)
-	var actions := HBoxContainer.new()
-	top_rows.add_child(actions)
-	button("Save",actions,func(): open_file(true))
-	button("Load",actions,func(): open_file(false))
-	mode_button = button("Play [Space]",actions,toggle_mode)
-	button("Close [Shift+Z+P]",actions,toggle_editor)
-	state_label = label("BUILD",actions)
-	var settings := HBoxContainer.new()
-	top_rows.add_child(settings)
-	for i in 3:
-		label([" Columns "," Rows "," Snap px "][i],settings)
-		var spinner := SpinBox.new()
-		spinner.min_value = 1
-		spinner.max_value = 64 if i==2 else 512
-		spinner.value = [60,34,16][i]
-		spinner.custom_minimum_size.x = 78
-		spinner.value_changed.connect(func(value: float):
-			if not data.is_empty(): data.grid[i] = int(value)
-			queue_redraw())
-		settings.add_child(spinner)
-		dimensions.append(spinner)
-	message = label("LMB place | RMB erase | Middle drag pan | Wheel zoom",top_rows)
-	message.add_theme_font_size_override("font_size",12)
-	bottom = PanelContainer.new()
+	var bar := HBoxContainer.new()
+	bar.add_theme_constant_override("separation",8)
+	top.add_child(bar)
+	width_input=add_dimension(bar,"Width")
+	height_input=add_dimension(bar,"Height")
+	color_button=LevelEditorUI.button("Color",show_color_picker)
+	bar.add_child(color_button)
+	var spacer := Control.new()
+	spacer.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	bar.add_child(spacer)
+	import_button=LevelEditorUI.button("Import",show_import)
+	bar.add_child(import_button)
+	export_button=LevelEditorUI.button("Export",show_export)
+	bar.add_child(export_button)
+	play_button=LevelEditorUI.button("Play",toggle_play)
+	bar.add_child(play_button)
+	bar.add_child(LevelEditorUI.button("Exit",func(): LevelEditorSession.exit_editor()))
+	var bottom := PanelContainer.new()
 	bottom.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	bottom.offset_top = -164
+	bottom.offset_top=-BOTTOM
 	ui.add_child(bottom)
-	var rows := VBoxContainer.new()
-	bottom.add_child(rows)
-	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size.y = 66
-	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	rows.add_child(scroll)
-	var palette := HBoxContainer.new()
-	scroll.add_child(palette)
-	var names := ["Wall","Player","Block","Key tile","Door","Portal","Sphere","Platform","One-way","Theme","Rotate CW","Rotate CCW","Large door","Pickup","Indicator","Sunny","Dialogue","Map hint","Lightning","Elevator","Phase wall","Fireworks area","Completion text","Erase"]
-	for i in names.size():
-		var item := button(names[i],palette,func(): select_item(i))
-		item.toggle_mode = true
-		item.custom_minimum_size = Vector2(96,58)
-		if i<textures.size():
-			item.icon = textures[i]
-			item.expand_icon = true
-			item.add_theme_constant_override("icon_max_width",24)
-		palette_buttons.append(item)
-	select_item(0)
-	var props := HBoxContainer.new()
-	rows.add_child(props)
-	label(" Color ",props)
-	var colors := OptionButton.new()
-	for name in PuzzlePalette.NAMES: colors.add_item(name)
-	colors.item_selected.connect(func(index: int): selected_color = index)
-	props.add_child(colors)
-	label(" Symbol ",props)
-	var symbols := OptionButton.new()
-	for name in ["Square","Circle","Triangle","Star"]: symbols.add_item(name)
-	symbols.item_selected.connect(func(index: int): selected_symbol = index)
-	props.add_child(symbols)
-	var beam_direction := OptionButton.new()
-	beam_direction.add_item("Lightning right")
-	beam_direction.add_item("Lightning left")
-	beam_direction.item_selected.connect(func(index: int): lightning_direction=index)
-	props.add_child(beam_direction)
-	label(" ID ",props)
-	var id_edit := LineEdit.new()
-	id_edit.text = "A"
-	id_edit.max_length = 32
-	id_edit.custom_minimum_size.x = 58
-	id_edit.text_changed.connect(func(value: String): link_id = value)
-	props.add_child(id_edit)
-	label(" Door needs ",props)
-	for i in 4:
-		var check := CheckBox.new()
-		check.text = PuzzlePalette.NAMES[i].capitalize()
-		check.modulate = PuzzlePalette.COLORS[i]
-		check.button_pressed = i==0
-		check.focus_mode = Control.FOCUS_NONE
-		check.toggled.connect(func(on: bool):
-			if on: required |= 1<<i
-			else: required &= ~(1<<i))
-		props.add_child(check)
-	var theme_props := HBoxContainer.new()
-	rows.add_child(theme_props)
-	var cycle := CheckBox.new()
-	cycle.text="Cycle hue"
-	cycle.toggled.connect(func(value: bool): trigger_cycle_hue=value)
-	theme_props.add_child(cycle)
-	label(" Theme hex ",theme_props)
-	var hex_edit := LineEdit.new()
-	hex_edit.placeholder_text = "#RRGGBB (optional)"
-	hex_edit.max_length = 32
-	hex_edit.custom_minimum_size.x = 210
-	hex_edit.text_changed.connect(func(value: String): trigger_hex = value)
-	theme_props.add_child(hex_edit)
-	label(" or color ",theme_props)
-	var picker := ColorPickerButton.new()
-	picker.color = trigger_color
-	picker.custom_minimum_size = Vector2(60,26)
-	picker.color_changed.connect(func(value: Color): trigger_color = value)
-	theme_props.add_child(picker)
-	for target in 2:
-		label(" Background " if target==0 else " Tiles ",theme_props)
-		var base_picker := ColorPickerButton.new()
-		base_picker.color = trigger_background if target==0 else trigger_tiles
-		base_picker.edit_alpha = false
-		base_picker.custom_minimum_size = Vector2(48,26)
-		base_picker.color_changed.connect(func(value: Color):
-			if target==0: trigger_background = value
-			else: trigger_tiles = value)
-		theme_props.add_child(base_picker)
-	label("Space switches build / play; testing preserves your layout",rows).add_theme_font_size_override("font_size",12)
-	file_dialog = FileDialog.new()
-	file_dialog.access = FileDialog.ACCESS_FILESYSTEM
-	file_dialog.filters = PackedStringArray(["*.cpplevel ; Chromatic Push level"])
-	file_dialog.file_selected.connect(file_selected)
-	ui.add_child(file_dialog)
-	ui.hide()
-func open_blank() -> void:
-	await get_tree().process_frame
-	var area := board_area()
-	data = {"v":1,"grid":[maxi(1,int(area.size.x/16)),maxi(1,int(area.size.y/16)),16],"tiles":[],"objects":[]}
-	active = true
-	enter_build()
-	ui.show()
-	level.get_node("GameHUD").hide()
-	fit_board()
-func board_area() -> Rect2:
-	return Rect2(0,top.get_rect().end.y,get_viewport_rect().size.x,maxf(16,bottom.get_rect().position.y-top.get_rect().end.y))
-func fit_board() -> void:
-	var area := board_area()
-	var size := Vector2(data.grid[0]*16,data.grid[1]*16)
-	var amount := minf(area.size.x/size.x,area.size.y/size.y)
-	editor_camera.zoom = Vector2.ONE*amount
-	editor_camera.position = size/2+(get_viewport_rect().size/2-area.get_center())/amount
-func select_item(index: int) -> void:
-	selected = index
-	for i in palette_buttons.size(): palette_buttons[i].button_pressed = i==index
-func toggle_editor() -> void:
-	if active:
-		get_tree().paused = false
-		get_tree().call_deferred("change_scene_to_file","res://scenes/main.tscn")
-	else:
-		open_blank()
-func enter_build() -> void:
-	building = true
-	get_tree().paused = true
-	level.get_node("Objects").hide()
-	level.get_node("Walls").hide()
-	editor_camera.enabled = true
-	editor_camera.make_current()
-	for i in 3: dimensions[i].set_value_no_signal(data.grid[i])
-	bottom.show()
-	state_label.text = "BUILD"
-	mode_button.text = "Play [Space]"
-	queue_redraw()
-func start_play() -> bool:
-	if not LevelData.valid(data):
-		message.text = "Place exactly one player before playtesting."
-		return false
-	if not LevelData.apply(level,data): return false
-	level.remember_level(data)
-	building = false
-	get_tree().paused = false
-	level.get_node("Objects").show()
-	level.get_node("Walls").show()
-	editor_camera.enabled = false
-	var camera := level.get_node("Camera") as Camera2D
-	camera.make_current()
-	camera.global_position = camera.player.global_position
-	camera.reset_smoothing()
-	bottom.hide()
-	state_label.text = "PLAYTEST"
-	mode_button.text = "Build [Space]"
-	queue_redraw()
+	var bottom_rows := VBoxContainer.new()
+	bottom.add_child(bottom_rows)
+	palette=HBoxContainer.new()
+	palette.alignment=BoxContainer.ALIGNMENT_CENTER
+	palette.add_theme_constant_override("separation",6)
+	bottom_rows.add_child(palette)
+	add_tool(1,0,"Player")
+	add_tool(0,0,"Wall")
+	for hue in 4: add_tool(2,hue,PuzzlePalette.NAMES[hue].capitalize()+" block")
+	for hue in 4: add_tool(3,hue,PuzzlePalette.NAMES[hue].capitalize()+" key")
+	add_tool(10,0,"Clockwise rotator")
+	add_tool(11,0,"Counterclockwise rotator")
+	var hint := Label.new()
+	hint.text="Left click: place    Right click: erase    Space: play / edit    Ctrl+Z: undo"
+	hint.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+	hint.add_theme_font_size_override("font_size",11)
+	bottom_rows.add_child(hint)
+	board=Board.new()
+	board.editor=self
+	board.clip_contents=true
+	ui.add_child(board)
+	play_view=SubViewportContainer.new()
+	play_view.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	play_view.hide()
+	ui.add_child(play_view)
+	play_viewport=SubViewport.new()
+	play_viewport.world_2d=World2D.new()
+	play_viewport.disable_3d=true
+	play_viewport.handle_input_locally=false
+	play_view.add_child(play_viewport)
+	objective=Label.new()
+	objective.text="Complete the puzzle by filling all the squares."
+	objective.horizontal_alignment=HORIZONTAL_ALIGNMENT_RIGHT
+	objective.add_theme_font_size_override("font_size",12)
+	objective.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	objective.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	objective.offset_left=8
+	objective.offset_right=-8
+	objective.offset_top=-BOTTOM-24
+	objective.offset_bottom=-BOTTOM-4
+	objective.hide()
+	ui.add_child(objective)
+	get_viewport().size_changed.connect(layout)
+	layout()
+	data.grid=[mini(40,int(width_input.max_value)),mini(20,int(height_input.max_value)),16]
+	load_draft()
+	update_theme()
+	sync_controls()
+	select_tool(1,0)
+	layout()
+
+func add_dimension(bar: HBoxContainer, caption: String) -> SpinBox:
+	var label := Label.new()
+	label.text=caption
+	bar.add_child(label)
+	var input := SpinBox.new()
+	input.min_value=1
+	input.max_value=512
+	input.step=1
+	input.custom_minimum_size.x=68
+	input.get_line_edit().add_theme_font_size_override("font_size",12)
+	input.value_changed.connect(resize_grid)
+	bar.add_child(input)
+	return input
+
+func load_draft() -> void:
+	if not FileAccess.file_exists(draft_path): return
+	var file := FileAccess.open(draft_path,FileAccess.READ)
+	if not file or file.get_length()>LevelEditorCodec.MAX_CELLS*2: return
+	var saved := LevelEditorCodec.decode(file.get_as_text())
+	if saved.is_empty(): return
+	data=saved
+	background_color=Color.html(data.color)
+
+func save_draft() -> bool:
+	var encoded := LevelEditorCodec.encode(data)
+	if encoded.is_empty(): return false
+	var file := FileAccess.open(draft_path+".tmp",FileAccess.WRITE)
+	if not file: return false
+	file.store_string(encoded)
+	file.flush()
+	var error := file.get_error()
+	file.close()
+	if error!=OK or DirAccess.rename_absolute(draft_path+".tmp",draft_path)!=OK: return false
+	if OS.has_feature("web"): JavaScriptBridge.force_fs_sync()
 	return true
-func toggle_mode() -> void:
-	get_viewport().gui_release_focus()
-	Input.action_release("jump")
-	if building: start_play()
-	else: enter_build()
-func _input(event: InputEvent) -> void:
-	if OS.has_feature("web"): return
-	if Dialogue.active or level.get_node("TeleportMap").active: return
-	if event is InputEventKey:
-		var code: int = event.physical_keycode if event.physical_keycode!=0 else event.keycode
-		chord_keys[code] = event.pressed
-		var chord: bool = (event.shift_pressed or chord_keys.get(KEY_SHIFT,false)) and chord_keys.get(KEY_Z,false) and chord_keys.get(KEY_P,false)
-		if chord and not chord_latched:
-			chord_latched = true
-			toggle_editor()
-			get_viewport().set_input_as_handled()
+
+func add_tool(kind: int, hue: int, caption: String) -> void:
+	var button := LevelEditorUI.button("",func(): select_tool(kind,hue))
+	button.custom_minimum_size=Vector2(40,36)
+	button.tooltip_text=caption
+	button.set_meta("kind",kind)
+	button.set_meta("hue",hue)
+	palette.add_child(button)
+	var preview := LevelEditorIcons.create(kind,hue,background_color)
+	preview.name="Preview"
+	preview.position=button.custom_minimum_size/2
+	preview.scale=Vector2.ONE*1.5
+	button.add_child(preview)
+	button.resized.connect(func(): preview.position=button.size/2)
+	palette_buttons.append(button)
+
+func select_tool(kind: int, hue: int) -> void:
+	selected_kind=kind
+	selected_hue=hue
+	for button in palette_buttons:
+		var selected: bool=button.get_meta("kind")==kind and button.get_meta("hue")==hue
+		var style: StyleBoxFlat=ui.theme.get_stylebox("normal","Button").duplicate()
+		style.border_color=Color.WHITE if selected else background_color.lightened(0.35)
+		button.add_theme_stylebox_override("normal",style)
+	board.refresh_ghost()
+	board.queue_redraw()
+
+func layout() -> void:
+	if not board: return
+	var size := get_viewport_rect().size
+	ui.size=size
+	updating=true
+	width_input.max_value=clampi(floori((size.x-16)/16),1,512)
+	height_input.max_value=clampi(floori((size.y-TOP-BOTTOM-16)/16),1,512)
+	updating=false
+	if data.grid[0]>width_input.max_value or data.grid[1]>height_input.max_value:
+		if playing: stop_play()
+		remember_edit()
+		crop_grid(mini(data.grid[0],int(width_input.max_value)),mini(data.grid[1],int(height_input.max_value)))
+	board.size=Vector2(data.grid[0]*16,data.grid[1]*16)
+	board.position=Vector2(floorf((size.x-board.size.x)/2),TOP+floorf((size.y-TOP-BOTTOM-board.size.y)/2))
+	play_view.position=board.position
+	play_view.size=board.size
+	play_viewport.size=Vector2i(board.size)
+	sync_controls()
+
+func sync_controls() -> void:
+	updating=true
+	width_input.value=data.grid[0]
+	height_input.value=data.grid[1]
+	updating=false
+	board.rebuild_visuals()
+	board.queue_redraw()
+
+func resize_grid(_value: float) -> void:
+	if updating or playing: return
+	remember_edit()
+	crop_grid(int(width_input.value),int(height_input.value))
+	layout()
+
+func crop_grid(width: int, height: int) -> void:
+	data.grid=[width,height,16]
+	data.tiles=data.tiles.filter(func(tile: Array): return tile[0]<width and tile[1]<height)
+	data.objects=data.objects.filter(func(item: Array): return item[1]<width*16 and item[2]<height*16)
+
+func remember_edit() -> void:
+	history.append(data.duplicate(true))
+	if history.size()>100: history.pop_front()
+
+func undo() -> void:
+	if playing or history.is_empty(): return
+	data=history.pop_back()
+	background_color=Color.html(data.color)
+	crop_grid(mini(data.grid[0],int(width_input.max_value)),mini(data.grid[1],int(height_input.max_value)))
+	update_theme()
+	layout()
+
+func paint_at(cell: Vector2i) -> void:
+	if playing or is_instance_valid(popup) or cell==last_cell or cell.x<0 or cell.y<0 or cell.x>=data.grid[0] or cell.y>=data.grid[1]: return
+	# Interpolate fast drags so no tiles are skipped between mouse events.
+	if last_cell.x>=0:
+		var start := last_cell
+		var steps := maxi(absi(cell.x-start.x),absi(cell.y-start.y))
+		for i in range(1,steps): paint_cell(Vector2i(Vector2(start).lerp(Vector2(cell),float(i)/steps).round()))
+	paint_cell(cell)
+	last_cell=cell
+	board.rebuild_visuals()
+	board.queue_redraw()
+
+func paint_cell(cell: Vector2i) -> void:
+	if not stroke_saved:
+		remember_edit()
+		stroke_saved=true
+	var tile := [cell.x,cell.y]
+	var point := Vector2(cell)*16+Vector2(8,8)
+	if erase:
+		data.tiles.erase(tile)
+		data.objects=data.objects.filter(func(item: Array): return Vector2(item[1],item[2])!=point)
+		return
+	if selected_kind==0:
+		if not data.tiles.has(tile): data.tiles.append(tile)
+		data.objects=data.objects.filter(func(item: Array): return Vector2(item[1],item[2])!=point)
+		return
+	data.tiles.erase(tile)
+	var marker := selected_kind in [3,10,11]
+	data.objects=data.objects.filter(func(item: Array):
+		if selected_kind==1 and item[0]==1: return false
+		return Vector2(item[1],item[2])!=point or (item[0] in [3,10,11])!=marker)
+	var item := [selected_kind,point.x,point.y]
+	if selected_kind==2: item.append_array([selected_hue,0.2,0.15])
+	elif selected_kind==3: item.append_array([selected_hue,"E%d_%d"%[cell.x,cell.y]])
+	data.objects.append(item)
+
+func update_theme() -> void:
+	data.color=background_color.to_html(false)
+	ui.theme=LevelEditorUI.theme_for(background_color)
+	var toolbar_style: StyleBoxFlat=ui.theme.get_stylebox("panel","PanelContainer").duplicate()
+	toolbar_style.content_margin_top=6
+	toolbar_style.content_margin_bottom=6
+	toolbar_style.content_margin_left=8
+	toolbar_style.content_margin_right=8
+	ui.get_node("Toolbar").add_theme_stylebox_override("panel",toolbar_style)
+	RenderingServer.set_default_clear_color(background_color.darkened(0.4))
+	if play_viewport: play_viewport.transparent_bg=false
+	for button in palette_buttons:
+		if button.get_meta("kind")==0: button.get_node("Preview").material.set_shader_parameter("tile_color",background_color.darkened(0.72))
+	select_tool(selected_kind,selected_hue)
+	board.rebuild_visuals()
+	board.queue_redraw()
+
+func close_popup() -> void:
+	if is_instance_valid(popup):
+		ui.remove_child(popup)
+		popup.queue_free()
+	popup=null
+	get_tree().paused=false
+
+func show_message(message: String) -> void:
+	close_popup()
+	get_tree().paused=true
+	popup=LevelEditorUI.modal(ui,background_color,message,{"Back":close_popup})
+	popup.cancel_action=close_popup
+
+func show_color_picker() -> void:
+	if playing: return
+	close_popup()
+	popup=LevelEditorUI.modal(ui,background_color,"Level color",{"Back":close_popup})
+	popup.cancel_action=close_popup
+	var picker := ColorPicker.new()
+	picker.edit_alpha=false
+	picker.color_modes_visible=false
+	picker.sliders_visible=false
+	picker.presets_visible=false
+	picker.sampler_visible=false
+	picker.add_theme_constant_override("sv_width",220)
+	picker.add_theme_constant_override("sv_height",220)
+	picker.color=background_color
+	picker.custom_minimum_size=Vector2(280,260)
+	popup.rows.add_child(picker)
+	popup.rows.move_child(picker,1)
+	remember_edit()
+	picker.color_changed.connect(func(color: Color):
+		background_color=color
+		update_theme()
+		popup.theme=LevelEditorUI.theme_for(color))
+
+func show_import() -> void:
+	if playing: return
+	close_popup()
+	popup=LevelEditorUI.modal(ui,background_color,"Paste a level code",{"Back":close_popup})
+	popup.cancel_action=close_popup
+	var input := TextEdit.new()
+	input.custom_minimum_size=Vector2(540,140)
+	input.wrap_mode=TextEdit.LINE_WRAPPING_BOUNDARY
+	popup.rows.add_child(input)
+	popup.rows.move_child(input,1)
+	var error := Label.new()
+	error.add_theme_font_size_override("font_size",12)
+	popup.rows.add_child(error)
+	popup.rows.move_child(error,2)
+	popup.actions.add_child(LevelEditorUI.button("Import",func():
+		var imported := LevelEditorCodec.decode(input.text)
+		if imported.is_empty():
+			error.text="Invalid or damaged level string."
 			return
-		if not chord: chord_latched = false
-		if active and event.pressed and not event.echo and event.physical_keycode==KEY_SPACE and not modal_open():
-			var focus := get_viewport().gui_get_focus_owner()
-			if focus is LineEdit: return
-			toggle_mode()
-			get_viewport().set_input_as_handled()
+		if imported.grid[0]>width_input.max_value or imported.grid[1]>height_input.max_value:
+			error.text="Level is too large for this view (maximum %d × %d)."%[width_input.max_value,height_input.max_value]
+			return
+		remember_edit()
+		data=imported
+		background_color=Color.html(data.color)
+		close_popup()
+		update_theme()
+		layout()))
+	input.grab_focus()
+
+func show_export() -> void:
+	if playing: return
+	close_popup()
+	var encoded := LevelEditorCodec.encode(data)
+	popup=LevelEditorUI.modal(ui,background_color,"Copy this code somewhere safe",{"Back":close_popup})
+	popup.cancel_action=close_popup
+	var output := TextEdit.new()
+	output.text=encoded
+	output.editable=false
+	output.wrap_mode=TextEdit.LINE_WRAPPING_BOUNDARY
+	output.custom_minimum_size=Vector2(540,140)
+	popup.rows.add_child(output)
+	popup.rows.move_child(output,1)
+	popup.actions.add_child(LevelEditorUI.button("Copy",func(): DisplayServer.clipboard_set(encoded)))
+	output.grab_focus()
+	output.select_all()
+
+func toggle_play() -> void:
+	if is_instance_valid(popup): return
+	if playing: stop_play()
+	elif not LevelData.valid(data): show_message("Place one player before playing your level.")
+	else: start_play()
+
+func start_play() -> void:
+	painting=false
+	playing=true
+	play_frames=0
+	world=Node2D.new()
+	world.process_mode=Node.PROCESS_MODE_PAUSABLE
+	var walls := TileMapLayer.new()
+	walls.name="Walls"
+	walls.tile_set=preload("res://assets/walls.tres")
+	var material := ShaderMaterial.new()
+	material.shader=preload("res://shaders/walls.gdshader")
+	material.set_shader_parameter("tile_color",background_color.darkened(0.72))
+	walls.material=material
+	world.add_child(walls)
+	var objects := Node2D.new()
+	objects.name="Objects"
+	world.add_child(objects)
+	play_viewport.add_child(world)
+	set_meta("effects_root",world)
+	set_meta("fall_limit",data.grid[1]*16+32)
+	LevelData.apply(world,data)
+	play_view.show()
+	board.hide()
+	set_edit_enabled(false)
+	play_button.text="Edit"
+	objective.show()
+
+func stop_play() -> void:
+	if not playing: return
+	playing=false
+	if is_instance_valid(world):
+		play_viewport.remove_child(world)
+		world.queue_free()
+	world=null
+	remove_meta("effects_root")
+	play_view.hide()
+	board.show()
+	set_edit_enabled(true)
+	play_button.text="Play"
+	objective.hide()
+	board.queue_redraw()
+
+func set_edit_enabled(enabled: bool) -> void:
+	width_input.editable=enabled
+	height_input.editable=enabled
+	width_input.get_line_edit().release_focus()
+	height_input.get_line_edit().release_focus()
+	for button in [color_button,import_button,export_button]+palette_buttons: button.disabled=not enabled
+
+func _process(_delta: float) -> void:
+	if painting and not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT): painting=false
+	if not playing or get_tree().paused: return
+	play_frames+=1
+	if play_frames<3: return
+	var pads := get_tree().get_nodes_in_group("pads")
+	if pads.is_empty(): return
+	for pad in pads:
+		if not pad.filled: return
+	stop_play()
+	show_message("Good job!\n\n You beat the level!")
+
+func _input(event: InputEvent) -> void:
+	if not event is InputEventKey or not event.pressed or event.echo: return
+	if is_instance_valid(popup): return
+	var code: int=event.physical_keycode if event.physical_keycode else event.keycode
+	if code==KEY_SPACE:
+		get_viewport().set_input_as_handled()
+		Input.action_release("jump")
+		toggle_play()
+	elif code==KEY_Z and (event.ctrl_pressed or event.meta_pressed):
+		var focus := get_viewport().gui_get_focus_owner()
+		if focus is LineEdit or focus is TextEdit: return
+		get_viewport().set_input_as_handled()
+		undo()
+
 func _notification(what: int) -> void:
 	if what==NOTIFICATION_WM_WINDOW_FOCUS_OUT:
-		chord_keys.clear()
-		chord_latched = false
-func _unhandled_input(event: InputEvent) -> void:
-	if not active or not building or modal_open(): return
-	if event is InputEventMouseButton:
-		if event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP,MOUSE_BUTTON_WHEEL_DOWN]:
-			editor_camera.zoom *= 1.12 if event.button_index==MOUSE_BUTTON_WHEEL_UP else 1/1.12
-			editor_camera.zoom = editor_camera.zoom.clamp(Vector2(0.25,0.25),Vector2(5,5))
-		if event.button_index in [MOUSE_BUTTON_LEFT,MOUSE_BUTTON_RIGHT]:
-			last_cell = Vector2i(-999999,-999999)
-			if event.pressed: paint(get_global_mouse_position(),event.button_index==MOUSE_BUTTON_RIGHT)
-	if event is InputEventMouseMotion:
-		if Input.is_mouse_button_pressed(MOUSE_BUTTON_MIDDLE): editor_camera.position -= event.relative/editor_camera.zoom
-		elif Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
-			paint(get_global_mouse_position(),Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT))
-func _process(delta: float) -> void:
-	if active and building and not modal_open():
-		if not get_viewport().gui_get_focus_owner() is LineEdit:
-			var axis := Input.get_vector("left","right","jump","down")
-			# Space is reserved for switching; pan vertically with arrow/W/S keys.
-			axis.y = float(Input.is_physical_key_pressed(KEY_S) or Input.is_physical_key_pressed(KEY_DOWN))-float(Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP))
-			editor_camera.position += axis*240*delta/editor_camera.zoom.x
-		queue_redraw()
-func modal_open() -> bool:
-	return file_dialog.visible or level.get_node("AudioSettings").menu.visible
-func paint(point: Vector2, erase := false) -> void:
-	get_viewport().gui_release_focus()
-	var snap := int(data.grid[2])
-	var cell := Vector2i(floor(point.x/snap),floor(point.y/snap))
-	if cell==last_cell: return
-	last_cell = cell
-	if point.x<0 or point.y<0 or point.x>=data.grid[0]*16 or point.y>=data.grid[1]*16: return
-	var tile := Vector2i(floor(point.x/16),floor(point.y/16))
-	if erase or selected==LevelData.SCENES.size():
-		data.tiles.erase([tile.x,tile.y])
-		for i in range(data.objects.size()-1,-1,-1):
-			var entry: Array = data.objects[i]
-			if Vector2(entry[1],entry[2]).distance_to(Vector2(cell*snap)+Vector2.ONE*snap/2.0)<snap*0.75: data.objects.remove_at(i)
-	elif selected==0:
-		if not data.tiles.has([tile.x,tile.y]): data.tiles.append([tile.x,tile.y])
-	else:
-		var position := Vector2(cell*snap)+Vector2.ONE*snap/2.0
-		if selected==1: position.y += snap/2.0-7
-		if selected==7:
-			position.y += snap/2.0-2
-			position = LevelData.platform_position(data,position)
-		for i in range(data.objects.size()-1,-1,-1):
-			var previous: Array = data.objects[i]
-			if int(previous[0])==selected and (selected==1 or Vector2(previous[1],previous[2]).distance_to(position)<1): data.objects.remove_at(i)
-		var entry := [selected,position.x,position.y]
-		if selected==2: entry.append_array([selected_color,0.2,0.15])
-		if selected==3: entry.append_array([selected_color,link_id])
-		if selected==4: entry.append_array([required,link_id])
-		if selected==5: entry.append(selected_symbol)
-		if selected==6: entry.append_array([150.0,0.2])
-		if selected==9: entry.append_array([trigger_hex,trigger_color.to_html(),trigger_cycle_hue])
-		if selected==12: entry.append(20)
-		if selected==13: entry.append("")
-		if selected==15: entry.append_array([StoryLines.NPC,""])
-		if selected==16: entry.append_array(["","Whoa, this one looks tough!"])
-		if selected==18: entry.append_array([lightning_direction,128,"8adfff",true])
-		if selected==19: entry.append(48.0)
-		if selected==21: entry.append_array([512.0,256.0])
-		if selected==22: entry.append_array([448.0,192.0,12])
-		data.objects.append(entry)
-	queue_redraw()
-func open_file(save: bool) -> void:
-	if not building: enter_build()
-	file_dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE if save else FileDialog.FILE_MODE_OPEN_FILE
-	file_dialog.current_file = "level.cpplevel" if save else ""
-	file_dialog.popup_centered_ratio(0.78)
-func file_selected(path: String) -> void:
-	if file_dialog.file_mode==FileDialog.FILE_MODE_SAVE_FILE: save_to(path)
-	else: load_from(path)
-func save_to(path: String) -> bool:
-	if not LevelData.valid(data,false):
-		message.text = "Save needs valid object settings and at most one player."
-		return false
-	var bytes := LevelData.encode(data)
-	var file := FileAccess.open(path,FileAccess.WRITE)
-	if file==null:
-		message.text = "Could not save: "+error_string(FileAccess.get_open_error())
-		return false
-	file.store_buffer(bytes)
-	file.close()
-	message.text = "Saved %s (%d bytes)" % [path.get_file(),bytes.size()]
-	return true
-func load_from(path: String) -> bool:
-	var file := FileAccess.open(path,FileAccess.READ)
-	if file==null or file.get_length()>LevelData.MAX_BYTES:
-		message.text = "Cannot open level, or file is too large."
-		return false
-	var loaded := LevelData.decode(file.get_buffer(file.get_length()))
-	file.close()
-	if loaded.is_empty():
-		message.text = "Invalid or damaged level; your layout is unchanged."
-		return false
-	data = loaded
-	if not building: enter_build()
-	for i in 3: dimensions[i].set_value_no_signal(data.grid[i])
-	message.text = "Loaded "+path.get_file()
-	fit_board()
-	queue_redraw()
-	return true
-func _draw() -> void:
-	if not active or not building or data.is_empty(): return
-	var size := Vector2(data.grid[0]*16,data.grid[1]*16)
-	draw_rect(Rect2(Vector2.ZERO,size),Color(0.6,0.6,0.6,0.98))
-	var snap := int(data.grid[2])
-	var view := get_viewport_rect().size/editor_camera.zoom
-	var start := editor_camera.position-view/2
-	var end := editor_camera.position+view/2
-	for x in range(maxi(0,int(start.x/snap)),mini(int(size.x/snap)+1,int(end.x/snap)+2)):
-		draw_line(Vector2(x*snap,maxf(0,start.y)),Vector2(x*snap,minf(size.y,end.y)),Color(0.25,0.45,0.6,0.23),0.5)
-	for y in range(maxi(0,int(start.y/snap)),mini(int(size.y/snap)+1,int(end.y/snap)+2)):
-		draw_line(Vector2(maxf(0,start.x),y*snap),Vector2(minf(size.x,end.x),y*snap),Color(0.25,0.45,0.6,0.23),0.5)
-	for door in data.objects:
-		if int(door[0])!=4: continue
-		for key in data.objects:
-			if int(key[0])==3 and key[4]==door[4] and int(door[3]) & (1<<int(key[3])):
-				DottedLinks.draw(self,Vector2(key[1],key[2]),Vector2(door[1],door[2]))
-	for item in data.objects:
-		if int(item[0])==21: draw_rect(Rect2(Vector2(item[1],item[2])-Vector2(item[3],item[4])/2,Vector2(item[3],item[4])),Color("252525"))
-	for tile in data.tiles: draw_texture_rect(textures[0],Rect2(tile[0]*16,tile[1]*16,16,16),false)
-	for item in data.objects:
-		var color := Color.WHITE
-		if int(item[0]) in [2,3]: color = PuzzlePalette.COLORS[int(item[3])]
-		var point := Vector2(item[1],item[2])
-		var icon_size := 12.0 if int(item[0])==3 else 16.0
-		draw_texture_rect(textures[int(item[0])],Rect2(point-Vector2.ONE*icon_size/2,Vector2.ONE*icon_size),false,color)
-	draw_rect(Rect2(Vector2.ZERO,size),Color("8acde1"),false,1)
-	var mouse := get_global_mouse_position()
-	var cell := Vector2(floor(mouse.x/snap),floor(mouse.y/snap))*snap
-	draw_rect(Rect2(cell,Vector2(snap,snap)),Color(0.7,0.9,1,0.6),false,0.7)
-
-
+		painting=false
+		last_cell=Vector2i(-1,-1)

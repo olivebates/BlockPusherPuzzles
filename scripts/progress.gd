@@ -14,6 +14,10 @@ var map_teleported := false
 var shortcut_keys := {}
 var delete_shortcut_latched := false
 func _input(event: InputEvent) -> void:
+	if not enabled or get_tree().paused:
+		shortcut_keys.clear()
+		delete_shortcut_latched=false
+		return
 	if OS.has_feature("web"): return
 	if not event is InputEventKey: return
 	var code: int=event.physical_keycode if event.physical_keycode else event.keycode

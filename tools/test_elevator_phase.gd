@@ -81,7 +81,7 @@ func run() -> void:
 	lift.position+=Vector2(0,32)
 	check(progress.apply_state(saved) and lift.position.distance_to(expected)<0.1,"Elevator position and travel state survive saved-progress restore")
 	var data := LevelData.decode(LevelData.encode(LevelData.capture(game)))
-	check(data.objects.any(func(item): return int(item[0])==19) and data.objects.any(func(item): return int(item[0])==20),"Both new objects survive compressed editor-level encoding")
+	check(data.objects.any(func(item): return int(item[0])==19) and data.objects.any(func(item): return int(item[0])==20),"Both new objects survive compressed level snapshot encoding")
 	check(LevelData.apply(game,data),"Levels containing fused elevators and dotted walls load successfully")
 	await frames(4)
 	current_scene=null

@@ -19,7 +19,7 @@ func run() -> void:
 	root.add_child(game)
 	current_scene = game
 	await frames(10)
-	check(game.has_node("EditorShortcut") and not game.has_node("LevelEditor"),"Gameplay launches independent editor instead of embedding its board")
+	check(not game.has_node("EditorShortcut") and not game.has_node("LevelEditor"),"Gameplay starts without level editor components")
 	var player := get_first_node_in_group("player")
 	var block := game.get_node("Objects/Block_0")
 	var sphere := game.get_node("Objects/WhiteSphere")
@@ -85,18 +85,8 @@ func run() -> void:
 	key(KEY_P,false)
 	key(KEY_Z,false)
 	key(KEY_SHIFT,false)
-	# The blank board waits for a rendered UI layout, independently of physics ticks.
-	for i in 3: await process_frame
-	game = current_scene
-	check(game.scene_file_path=="res://scenes/level_editor.tscn","Shift+Z+P opens independent editor scene")
-	var editor := game.get_node("LevelEditor")
-	check(editor.active and editor.building and editor.data.objects.is_empty() and editor.data.tiles.is_empty(),"Editor starts with a completely clear board")
-	var area: Rect2 = editor.board_area()
-	check(editor.data.grid[0]==int(area.size.x/16) and editor.data.grid[1]==int(area.size.y/16),"Default board size derives from usable editor area")
-	check(not editor.has_method("open_generator"),"Puzzle generator and button removed")
-	check(LevelData.decode(LevelData.encode(editor.data)).objects.is_empty(),"Empty editor boards can be saved and loaded")
-	editor.data=load("res://tools/test_fixture.gd").new().board()
-	check(editor.start_play(),"Hand-authored board starts in play mode")
+	check(current_scene==game and not paused,"Shift+Z+P keeps gameplay running in the current scene")
+	check(LevelData.apply(game,load("res://tools/test_fixture.gd").new().board()),"Hand-authored board loads for gameplay")
 	await frames(8)
 	var guide := game.get_node("PlatformGuide")
 	get_first_node_in_group("player").position=get_first_node_in_group("pads").position+Vector2(0,-16)
@@ -125,8 +115,6 @@ func run() -> void:
 	Input.action_release("right")
 	check(not player.get_node("Visual").flip_h,"Sprite faces right while moving right")
 	check(game.get_node("GameHUD").get_child_count()==0,"Gameplay HUD has no text")
-	editor.enter_build()
-	check(not editor.data.objects.is_empty(),"Playtest returns to authored layout")
 	paused = false
 	await frames(30)
 	current_scene = null

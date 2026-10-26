@@ -1,134 +1,210 @@
 extends SceneTree
 var failures := 0
 func _initialize() -> void: call_deferred("run")
-func check(condition: bool, message: String) -> void:
-	print(("PASS: " if condition else "FAIL: ")+message)
-	if not condition: failures += 1
-func frames(count: int) -> void:
-	for i in count: await physics_frame
-func key(code: Key, down: bool) -> void:
+func check(value: bool, message: String) -> void:
+	print(("PASS: " if value else "FAIL: ")+message)
+	if not value: failures+=1
+func key(code: int) -> InputEventKey:
 	var event := InputEventKey.new()
-	event.physical_keycode = code
-	event.keycode = code
-	event.pressed = down
-	Input.parse_input_event(event)
-	Input.flush_buffered_events()
+	event.keycode=code
+	event.physical_keycode=code
+	event.pressed=true
+	return event
+func paint(editor: Node2D, kind: int, hue: int, cell: Vector2i) -> void:
+	editor.select_tool(kind,hue)
+	editor.last_cell=Vector2i(-1,-1)
+	editor.stroke_saved=false
+	editor.erase=false
+	editor.paint_at(cell)
 func run() -> void:
-	create_timer(20,true).timeout.connect(func(): quit(99))
-	var level: Node2D = load("res://scenes/level_editor.tscn").instantiate()
-	root.add_child(level)
-	current_scene = level
-	await frames(8)
-	var editor := level.get_node("LevelEditor")
-	check(editor.get_script()!=null,"Editor script loads successfully")
-	check(editor.active and editor.building and paused,"Independent editor opens in paused build mode")
-	check(editor.data.objects.is_empty() and editor.data.tiles.is_empty(),"New editor board is clear")
-	check(editor.data.grid[0]==int(editor.board_area().size.x/16),"Default grid width fits editor area")
-	check(editor.data.grid[1]==int(editor.board_area().size.y/16),"Default grid height fits editor area")
-	check(editor.save_to("res://.godot/empty-editor.cpplevel"),"Blank layouts can be saved before placing a player")
-	check(not editor.start_play() and editor.building,"Playtest requires a player without losing layout")
-	editor.select_item(2)
-	editor.selected_color = 2
-	editor.paint(Vector2(400,220))
-	check(editor.data.objects.back()==[2,408.0,216.0,2,0.2,0.15],"Palette places colored block with default timing")
-	editor.last_cell = Vector2i(-999999,-999999)
-	editor.paint(Vector2(400,220),true)
-	check(editor.data.objects.is_empty(),"Grid eraser removes placed objects")
-	editor.select_item(0)
-	editor.last_cell = Vector2i(-999999,-999999)
-	editor.paint(Vector2(400,220))
-	check(editor.data.tiles.has([25,13]),"Wall paint uses native 16px tile grid")
-	editor.data.grid=[80,45,8]
-	editor.select_item(5)
-	editor.selected_symbol=3
-	editor.last_cell=Vector2i(-999999,-999999)
-	editor.paint(Vector2(412,220))
-	check(editor.data.objects.back()==[5,412.0,220.0,3],"Custom snap preserves portal symbol placement")
-	editor.select_item(8)
-	editor.last_cell=Vector2i(-999999,-999999)
-	editor.paint(Vector2(444,220))
-	check(editor.data.objects.back()==[8,444.0,220.0],"Palette places the new one-way block")
-	editor.select_item(9)
-	editor.trigger_hex="#ffaa55"
-	editor.trigger_color=Color.GREEN
-	editor.trigger_background=Color("283347")
-	editor.trigger_tiles=Color("172c20")
-	editor.last_cell=Vector2i(-999999,-999999)
-	editor.paint(Vector2(452,220))
-	var theme_entry: Array=LevelData.decode(LevelData.encode(editor.data)).objects.back()
-	check(theme_entry==[9,452.0,220.0,"#ffaa55",Color.GREEN.to_html(),editor.trigger_cycle_hue],"Editor theme trigger keeps tint and the hue-cycle toggle through save/load")
-	for kind in [10,11]:
-		editor.select_item(kind)
-		editor.last_cell=Vector2i(-999999,-999999)
-		editor.paint(Vector2(460+(kind-10)*16,204))
-		check(int(LevelData.decode(LevelData.encode(editor.data)).objects.back()[0])==kind,"Editor places and saves rotator direction %d" % kind)
-	for kind in range(12,18):
-		editor.select_item(kind)
-		editor.last_cell=Vector2i(-999999,-999999)
-		editor.paint(Vector2(492+(kind-12)*16,204))
-		check(int(LevelData.decode(LevelData.encode(editor.data)).objects.back()[0])==kind,"Editor places and saves story object %d" % kind)
-	editor.select_item(3)
-	editor.selected_color=1
-	editor.link_id="TEST"
-	editor.last_cell=Vector2i(-999999,-999999)
-	editor.paint(Vector2(420,220))
-	check(editor.data.objects.back()==[3,420.0,220.0,1,"TEST"],"Key tile placement stores color and ID")
-	editor.select_item(4)
-	editor.required=5
-	editor.last_cell=Vector2i(-999999,-999999)
-	editor.paint(Vector2(428,220))
-	check(editor.data.objects.back()==[4,428.0,220.0,5,"TEST"],"Door placement stores multiple required colors")
-	editor.select_item(1)
-	editor.last_cell=Vector2i(-999999,-999999)
-	editor.paint(Vector2(40,40))
-	editor.last_cell=Vector2i(-999999,-999999)
-	editor.paint(Vector2(48,40))
-	var players:=0
+	create_timer(45,true).timeout.connect(func(): quit(99))
+	var progress := root.get_node("Progress")
+	progress.save_root="res://.godot/level-editor-test-progress"
+	var session := root.get_node("LevelEditorSession")
+	session.draft_path="res://.godot/level-editor-test-draft.cpe"
+	if FileAccess.file_exists(session.draft_path): DirAccess.remove_absolute(session.draft_path)
+	var game: Node2D=load("res://scenes/main.tscn").instantiate()
+	root.add_child(game)
+	current_scene=game
+	for i in 12: await process_frame
+	root.get_node("Dialogue").stop()
+	var player: CharacterBody2D=get_first_node_in_group("player")
+	player.set_physics_process(false)
+	player.position=Vector2(56,313)
+	var saved_position := player.position
+	var support := game.get_node("SupportLinks/SupportBar")
+	check(support.get_child_count()==3 and support.get_child(2).caption=="Level Editor","Level Editor sits immediately to the right of Donate")
+	session.warned=false
+	session.open_menu()
+	check(paused and is_instance_valid(session.overlay),"Opening editor pauses gameplay and opens spoiler warning")
+	check(session.overlay.rows.get_child(0).text==session.WARNING,"First warning uses the requested text")
+	check(session.overlay.actions.get_child(0).text=="Back" and session.overlay.actions.get_child(1).text=="Continue","Warning offers Back and Continue")
+	session.close_menu()
+	check(not paused and not session.warned,"Back resumes gameplay without accepting the warning")
+	session.open_menu()
+	session.overlay._input(key(KEY_ESCAPE))
+	check(not paused and not is_instance_valid(session.overlay),"Escape closes the warning and resumes gameplay")
+	session.open_menu()
+	session.accept_warning()
+	check(session.warned and session.overlay.actions.get_child_count()==1 and session.overlay.actions.get_child(0).text=="Make Levels","Continue opens a menu containing only Make Levels")
+	session.enter_editor()
+	for i in 4: await process_frame
+	var editor := current_scene
+	check(editor!=game and editor.scene_file_path=="res://scenes/level_editor.tscn","Make Levels opens a separate editor scene")
+	check(not game.is_inside_tree() and not progress.enabled,"Main game is suspended and editor cannot autosave over progress")
+	var saved: Dictionary=progress.read_file(session.TEMP_PATH)
+	check(not saved.is_empty() and saved.player==[56.0,313.0],"Temporary file contains the main-game progress")
+	check(editor.palette_buttons.size()==12,"Palette contains walls, all four blocks and keys, both rotators, and player")
+	check(editor.palette_buttons[0].get_meta("kind")==1,"Player is first in the palette")
+	var block_preview: Node2D=editor.palette_buttons[2].get_node("Preview").get_child(0)
+	check(block_preview.material.shader.resource_path=="res://shaders/surface.gdshader","Palette blocks use the in-game animated holographic shader")
+	check(get_nodes_in_group("blocks").is_empty(),"Editor previews do not participate in gameplay physics or welding groups")
+	var view_size: Vector2=editor.get_viewport_rect().size
+	check(editor.ui.size==view_size and editor.ui.get_node("Toolbar").size.x==view_size.x,"Editor toolbar and palette span the visible viewport")
+	check(editor.width_input.max_value==floor((view_size.x-16)/16.0) and editor.height_input.max_value==floor((view_size.y-editor.TOP-editor.BOTTOM-16)/16.0),"Grid limits exclude the toolbar and palette")
+	editor.toggle_play()
+	check(not editor.playing and is_instance_valid(editor.popup),"Play requires a player spawn and explains how to fix the draft")
+	editor.close_popup()
+	paint(editor,2,1,Vector2i(3,3))
+	paint(editor,3,1,Vector2i(3,3))
+	check(editor.data.objects.size()==2,"A block and matching key can share one tile")
+	editor.erase=true
+	editor.last_cell=Vector2i(-1,-1)
+	editor.stroke_saved=false
+	editor.paint_at(Vector2i(3,3))
+	check(editor.data.objects.is_empty(),"Right click removes every object beneath the mouse")
+	editor.undo()
+	check(editor.data.objects.size()==2,"Undo restores a deleted block and key")
+	paint(editor,1,0,Vector2i(1,1))
+	paint(editor,1,0,Vector2i(2,2))
+	var players := 0
 	for item in editor.data.objects:
 		if item[0]==1: players+=1
-	check(players==1,"Placing a second player moves the existing spawn")
-	var raw:=JSON.stringify(editor.data).to_utf8_buffer()
-	var encoded:=LevelData.encode(editor.data)
-	var decoded:=LevelData.decode(encoded)
-	check(JSON.stringify(decoded)==JSON.stringify(editor.data),"Compressed level round-trip is lossless")
-	check(encoded.size()<raw.size(),"Compressed save is smaller than compact JSON")
-	check(LevelData.decode(encoded.slice(0,8)).is_empty(),"Truncated save is rejected")
-	var invalid:=encoded.duplicate()
-	invalid[0]=0
-	check(LevelData.decode(invalid).is_empty(),"Invalid file header is rejected")
-	check(editor.save_to("res://.godot/editor-test.cpplevel"),"Save writes compressed level file")
-	editor.data.grid=[10,10,16]
-	check(editor.load_from("res://.godot/editor-test.cpplevel") and editor.data.grid==[80,45,8],"Load restores custom grid settings")
-	editor.data=load("res://tools/test_fixture.gd").new().board()
-	var authored:=JSON.stringify(editor.data)
-	key(KEY_SPACE,true)
+	check(players==1,"Placing the player again moves its single spawn")
+	paint(editor,0,0,Vector2i(3,3))
+	check(editor.data.tiles.has([3,3]) and editor.data.objects.size()==1,"Walls replace overlapping objects")
+	editor.width_input.value=2
+	check(editor.data.grid[0]==2 and editor.data.tiles.is_empty() and editor.data.objects.is_empty(),"Reducing dimensions crops objects outside the new bounds")
+	editor.undo()
+	check(editor.data.tiles.has([3,3]) and editor.data.objects.size()==1,"Undo restores a resized draft")
+	editor.erase=false
+	editor.select_tool(0,0)
+	editor.last_cell=Vector2i(4,4)
+	editor.stroke_saved=false
+	editor.paint_at(Vector2i(9,4))
+	check(editor.data.tiles.has([5,4]) and editor.data.tiles.has([8,4]),"Fast mouse drags paint intermediate tiles without gaps")
+	paint(editor,2,0,Vector2i(5,5))
+	paint(editor,2,0,Vector2i(6,5))
+	paint(editor,2,0,Vector2i(6,6))
+	paint(editor,2,0,Vector2i(7,7))
+	paint(editor,2,1,Vector2i(7,6))
+	var components := LevelEditorIcons.block_components(editor.data.objects)
+	check(components.size()==3 and components[0].points.size()==3,"Only orthogonally connected blocks of the same color merge in the editor")
+	var merged: Node2D
+	for child in editor.board.content.get_children():
+		if child.get_meta("block_cells",0)==3: merged=child
+	check(is_instance_valid(merged) and merged.get_child_count()==4,"Merged blocks draw three surfaces with one shared outline and pivot")
+	if merged:
+		var outline: Node2D=merged.get_child(3)
+		check(outline.paths.size()==1 and outline.pivot==Vector2(16,0),"L-shaped editor welds trace a closed contour and choose the game's central pivot")
+	editor.data={"v":1,"grid":[30,18,16],"color":"7842a6","tiles":[],"objects":[[1,24,120]]}
+	for x in 30: editor.data.tiles.append([x,8])
+	for hue in 4:
+		paint(editor,2,hue,Vector2i(3+hue*3,7))
+		paint(editor,3,hue,Vector2i(4+hue*3,7))
+	paint(editor,10,0,Vector2i(16,7))
+	paint(editor,11,0,Vector2i(18,7))
+	var encoded := LevelEditorCodec.encode(editor.data)
+	var decoded := LevelEditorCodec.decode(encoded)
+	check(not decoded.is_empty() and LevelEditorCodec.encode(decoded)==encoded,"All palette objects and color round-trip losslessly through a canonical compressed string")
+	check(encoded.length()<JSON.stringify(editor.data).length()/2,"Packed/compressed level string is substantially smaller than JSON")
+	check(LevelEditorCodec.decode("garbage").is_empty() and LevelEditorCodec.decode("CPE1:!!!!").is_empty(),"Malformed imports are rejected")
+	var bad := Marshalls.base64_to_raw(encoded.substr(5))
+	bad.encode_u16(0,513)
+	check(LevelEditorCodec.decode("CPE1:"+Marshalls.raw_to_base64(bad)).is_empty(),"Oversized compressed payloads are rejected before decompression")
+	editor.background_color=Color.html(editor.data.color)
+	editor.update_theme()
+	editor.layout()
+	editor.show_color_picker()
+	for i in 3: await process_frame
+	check(editor.popup.panel.get_global_rect().end.y<=view_size.y and editor.popup.panel.size.y<view_size.y,"Color picker and its Back button fit inside the viewport")
+	editor.close_popup()
+	editor.show_export()
+	check(editor.popup.rows.get_child(0).text=="Copy this code somewhere safe","Export displays the requested code instruction without a character count")
+	var style: StyleBoxFlat=editor.popup.panel.get_theme_stylebox("panel")
+	check(style.bg_color==editor.background_color and style.border_width_left==1,"Popups use the current level color with a one-pixel outline")
+	editor.popup._input(key(KEY_ESCAPE))
+	check(not is_instance_valid(editor.popup),"Escape closes an editor popup safely")
+	var empty_level := {"v":1,"grid":[1,1,16],"color":"000000","tiles":[],"objects":[]}
+	check(LevelEditorCodec.decode(LevelEditorCodec.encode(empty_level))==empty_level,"An unfinished draft with no player can still be exported and imported")
+	editor.show_import()
+	check(editor.popup.rows.get_child(0).text=="Paste a level code","Import displays the requested code instruction")
+	var text: TextEdit=editor.popup.rows.get_child(1)
+	text.grab_focus()
+	var typing := InputEventKey.new()
+	typing.keycode=KEY_A
+	typing.unicode=97
+	typing.pressed=true
+	Input.parse_input_event(typing)
 	await process_frame
-	key(KEY_SPACE,false)
-	check(not paused and not editor.building,"Space switches build to live play")
-	await frames(6)
-	check(level.get_node("Camera").level_bounds==Vector2(1280,720),"Custom board controls camera bounds")
-	var icons_hidden:=true
-	for object in level.get_node("Objects").get_children():
-		if object.has_node("EditorIcon") and object.get_node("EditorIcon").visible: icons_hidden=false
-	check(icons_hidden,"Identification sprites remain hidden in gameplay")
-	get_first_node_in_group("blocks").position.x+=24
-	editor.enter_build()
-	check(JSON.stringify(editor.data)==authored,"Returning to build preserves authored layout after movement")
-	check(editor.start_play(),"Build to play can repeat")
-	await frames(5)
-	check(get_first_node_in_group("player").velocity.y>=0,"Space mode switch does not also jump the player")
-	key(KEY_SHIFT,true)
-	key(KEY_Z,true)
-	key(KEY_P,true)
-	await frames(5)
-	key(KEY_P,false)
-	key(KEY_Z,false)
-	key(KEY_SHIFT,false)
-	check(current_scene.scene_file_path=="res://scenes/main.tscn" and not paused,"Shift+Z+P exits independent editor back to game")
-	await frames(30)
-	var final_scene:=current_scene
+	check(text.text=="a","Import popup accepts keyboard text input")
+	text.text="invalid"
+	editor.popup.actions.get_child(1).pressed.emit()
+	check(editor.popup.rows.get_child(2).text=="Invalid or damaged level string.","Invalid imports show an inline error and retain the draft")
+	text.text=encoded
+	editor.popup.actions.get_child(1).pressed.emit()
+	check(not is_instance_valid(editor.popup) and editor.data.color=="7842a6","Import rebuilds the level and its theme")
+	editor.data.objects=[[1,24,120]]
+	editor.toggle_play()
+	for i in 5: await physics_frame
+	check(editor.playing and not is_instance_valid(editor.popup),"A level with no keys does not immediately declare victory")
+	editor.stop_play()
+	# One solvable key, initially under a block of the wrong color.
+	editor.data.objects=[[1,24,120],[2,56,120,1,0.2,0.15],[3,56,120,0,"A"]]
+	var original: Dictionary=editor.data.duplicate(true)
+	editor._input(key(KEY_SPACE))
+	for i in 8: await physics_frame
+	check(editor.playing and editor.play_button.text=="Edit","Space enters play mode and mismatched blocks do not win")
+	check(editor.objective.visible and editor.objective.text=="Complete the puzzle by filling all the squares." and editor.objective.position.y+editor.objective.size.y<=view_size.y-editor.BOTTOM,"Play mode shows the puzzle instruction at the bottom right above the palette")
+	check(not is_instance_valid(editor.popup),"Unfilled keys do not trigger completion")
+	editor._input(key(KEY_SPACE))
+	await process_frame
+	check(not editor.playing and editor.data==original,"Space returns to an unchanged editor draft")
+	check(not editor.objective.visible,"Puzzle instruction is hidden while editing")
+	editor.toggle_play()
+	for i in 4: await physics_frame
+	var block := get_first_node_in_group("blocks")
+	block.block_color=0
+	for i in 10: await process_frame
+	check(not editor.playing and is_instance_valid(editor.popup),"Filling every key with its correct block returns to the editor")
+	if is_instance_valid(editor.popup):
+		check(editor.popup.rows.get_child(0).text=="Good job!\n\n You beat the level!","Completion uses the requested message")
+	editor.close_popup()
+	editor.toggle_play()
+	check(editor.playing,"Exit can be used during a play test")
+	# Verify restoration actually reads the file rather than relying on retained state.
+	player.position=Vector2(-100,-100)
+	var draft_code := LevelEditorCodec.encode(editor.data)
+	session.exit_editor()
+	for i in 6: await process_frame
+	check(current_scene==game and game.is_inside_tree() and progress.enabled,"Exit resumes the main game and re-enables its autosave")
+	check(player.position==saved_position,"Exit loads the player position from the temporary save")
+	check(not FileAccess.file_exists(session.TEMP_PATH),"Exit deletes the temporary save after a successful restore")
+	check(get_nodes_in_group("player").size()==1,"Editor playtest objects are removed from gameplay groups")
+	check(FileAccess.get_file_as_string(session.draft_path)==draft_code,"Exit saves the authored draft rather than playtest object positions")
+	session.open_menu()
+	check(session.overlay.actions.get_child(0).text=="Make Levels","Later visits skip the accepted spoiler warning")
+	session.enter_editor()
+	for i in 4: await process_frame
+	editor=current_scene
+	check(LevelEditorCodec.encode(editor.data)==draft_code and editor.background_color.to_html(false)=="7842a6","Reopening the editor restores all saved objects, dimensions, and level color")
+	paint(editor,2,3,Vector2i(10,6))
+	draft_code=LevelEditorCodec.encode(editor.data)
+	session.exit_editor()
+	for i in 4: await process_frame
+	check(FileAccess.get_file_as_string(session.draft_path)==draft_code,"Later exits replace the previous saved draft")
+	progress.enabled=false
 	current_scene=null
-	final_scene.queue_free()
+	game.queue_free()
 	await process_frame
-	print("LEVEL EDITOR: ","PASS" if failures==0 else "FAIL (%d)" % failures)
 	quit(failures)

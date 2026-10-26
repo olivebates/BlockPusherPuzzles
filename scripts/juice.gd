@@ -77,7 +77,8 @@ func burst(point: Vector2, color: Color, amount := 10) -> void:
 		particle.polygon = PackedVector2Array([Vector2(-1,-1),Vector2(1,-1),Vector2(1,1),Vector2(-1,1)])
 		particle.color = color
 		particle.position = point
-		get_tree().current_scene.add_child(particle)
+		var scene := get_tree().current_scene
+		scene.get_meta("effects_root",scene).add_child(particle)
 		var tween := particle.create_tween().set_parallel(true)
 		tween.tween_property(particle,"position",point + Vector2.from_angle(randf()*TAU)*randf_range(10,32),0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		tween.tween_property(particle,"modulate:a",0.0,0.35)
@@ -96,7 +97,8 @@ func push_sparks(point: Vector2, color: Color, direction: float) -> void:
 		particle.polygon = PackedVector2Array([Vector2(-0.6,-0.6),Vector2(0.6,-0.6),Vector2(0.6,0.6),Vector2(-0.6,0.6)])
 		particle.color = color
 		particle.position = point
-		get_tree().current_scene.add_child(particle)
+		var scene := get_tree().current_scene
+		scene.get_meta("effects_root",scene).add_child(particle)
 		# Total angular width is 25 degrees, centered on movement direction.
 		var travel := Vector2(direction,0).rotated(deg_to_rad(randf_range(-12.5,12.5)))*randf_range(12,24)
 		var tween := particle.create_tween().set_parallel(true)

@@ -22,7 +22,4 @@ func _process(delta: float) -> void:
 	if material: material.set_shader_parameter("energy",energy)
 	queue_redraw()
 func _draw() -> void:
-	var color := PuzzlePalette.color_for(block_color)
-	draw_rect(Rect2(-6,-6,12,12),Color(color,0.08+energy*0.22))
-	draw_rect(Rect2(-6,-6,12,12),color,false,1)
-	if energy > 0: draw_rect(Rect2(-7.5,-7.5,15,15),Color(color,energy*0.4),false,0.6)
+	preload("res://scripts/puzzle_art.gd").draw_pad(self,PuzzlePalette.color_for(block_color),energy)
