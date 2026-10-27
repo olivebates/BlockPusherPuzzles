@@ -1,6 +1,6 @@
 import { internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
-import { levelMeta, replayMeta, MAX_REPLAY_COMMENT } from "./codec";
+import { levelContent, levelMeta, replayMeta, MAX_REPLAY_COMMENT } from "./codec";
 import { hotScore, validIdentity, validRequest } from "./validation";
 
 export const complete = internalMutation({
@@ -14,7 +14,10 @@ export const complete = internalMutation({
     if (level.revision !== args.revision) return { error: "This puzzle changed. Reopen it before saving a replay." };
     const replay = args.replayString ? replayMeta(args.replayString) : null;
     if (replay && [...replay.c].length > MAX_REPLAY_COMMENT) return { error: "Replay comments must be 40 characters or fewer." };
-    if (args.replayString && (!replay || levelMeta(replay.l)?.l !== levelMeta(level.levelString)?.l || replay.n !== levelMeta(replay.l)?.n)) return { error: "Invalid replay." };
+    const replayLevel = replay && levelMeta(replay.l);
+    const currentLevel = levelMeta(level.levelString);
+    if (args.replayString && (!replay || !replayLevel || !currentLevel ||
+        levelContent(replayLevel.l) !== levelContent(currentLevel.l) || replay.n !== replayLevel.n)) return { error: "Invalid replay." };
     const oldReplay = args.replayString ? await ctx.db.query("replays").withIndex("by_run", q =>
       q.eq("levelId", level._id).eq("publisherId", args.publisherId).eq("runId", args.runId)).unique() : null;
     const legacyRevision = level.resetRevision ? 1 : level.revision;
@@ -53,9 +56,9 @@ export const list = internalQuery({
       .filter(q => q.or(q.eq(q.field("revision"), level.revision),
         q.and(q.eq(q.field("revision"), undefined), q.eq(level.resetRevision, undefined))))
       .order("desc").paginate({ numItems: 50, cursor: args.cursor || null });
-    return { replays: result.page.map(row => {
-      const replay = replayMeta(row.replayString)!;
-      return { id: row._id, name: replay.n, author: replay.a, comment: replay.c, time: row.duration };
+    return { replays: result.page.flatMap(row => {
+      const replay = replayMeta(row.replayString);
+      return replay ? [{ id: row._id, name: replay.n, author: replay.a, comment: replay.c, time: row.duration }] : [];
     }), cursor: result.isDone ? "" : result.continueCursor };
   },
 });

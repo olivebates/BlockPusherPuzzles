@@ -229,6 +229,11 @@ func _draw() -> void:
 		var width := font.get_string_size(hint,HORIZONTAL_ALIGNMENT_LEFT,-1,10).x
 		draw_string(font,Vector2(-width/2,-26 if show_recall_prompt else -14),hint,HORIZONTAL_ALIGNMENT_LEFT,-1,10,Color("ffd433"))
 func map_hint() -> String:
+	if not Progress.enabled: return ""
+	var ancestor := get_parent()
+	while ancestor:
+		if ancestor.get_meta("custom_level",false): return ""
+		ancestor=ancestor.get_parent()
 	if Progress.map_hint_stage not in [1,2]: return ""
 	return InputBindings.prompt("map").to_upper()+(" - Teleport" if Progress.map_hint_stage==2 else "")
 

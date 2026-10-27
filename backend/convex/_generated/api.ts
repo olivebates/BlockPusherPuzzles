@@ -9,6 +9,7 @@
  */
 
 import type * as codec from "../codec.js";
+import type * as dataVersion from "../dataVersion.js";
 import type * as http from "../http.js";
 import type * as levels from "../levels.js";
 import type * as replays from "../replays.js";
@@ -23,6 +24,7 @@ import { anyApi, componentsGeneric } from "convex/server";
 
 const fullApi: ApiFromModules<{
   codec: typeof codec;
+  dataVersion: typeof dataVersion;
   http: typeof http;
   levels: typeof levels;
   replays: typeof replays;

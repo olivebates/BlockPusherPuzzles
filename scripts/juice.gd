@@ -1,10 +1,15 @@
 extends Node
 var voices: Array[AudioStreamPlayer] = []
+var victory_voice: AudioStreamPlayer
+var victory_stream: AudioStreamWAV
 var reduced_motion := false
 var volumes := {"Music":0.7,"SFX":0.8}
 signal sound_played(kind: String)
 signal block_pushed
 func _exit_tree() -> void:
+	if is_instance_valid(victory_voice):
+		victory_voice.stop()
+		victory_voice.stream=null
 	for voice in voices:
 		if is_instance_valid(voice):
 			voice.stop()
@@ -23,6 +28,12 @@ func _ready() -> void:
 		voice.bus = "SFX"
 		add_child(voice)
 		voices.append(voice)
+	# Completion dialogs pause gameplay; their fanfare must still be audible.
+	victory_voice=AudioStreamPlayer.new()
+	victory_voice.name="VictorySound"
+	victory_voice.bus="SFX"
+	victory_voice.process_mode=Node.PROCESS_MODE_ALWAYS
+	add_child(victory_voice)
 func apply_volume(bus_name: String) -> void:
 	var index := AudioServer.get_bus_index(bus_name)
 	AudioServer.set_bus_mute(index,volumes[bus_name]<=0)
@@ -35,6 +46,12 @@ func set_volume(bus_name: String, amount: float) -> void:
 	config.save("user://audio.cfg")
 	if OS.has_feature("web"): JavaScriptBridge.force_fs_sync()
 func sound(kind: String, pitch := 1.0) -> void:
+	if kind=="victory":
+		if not victory_stream: victory_stream=make_victory_sound()
+		victory_voice.stream=victory_stream
+		victory_voice.play()
+		sound_played.emit(kind)
+		return
 	var frequency := 220.0
 	var duration := 0.12
 	var end_frequency := 100.0
@@ -71,6 +88,33 @@ func sound(kind: String, pitch := 1.0) -> void:
 			voice.play()
 			sound_played.emit(kind)
 			break
+
+func make_victory_sound() -> AudioStreamWAV:
+	var stream := AudioStreamWAV.new()
+	stream.format=AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate=22050
+	stream.loop_mode=AudioStreamWAV.LOOP_DISABLED
+	# C–E–G–C, ending with a soft major chord and a clean decay.
+	var frequencies := [523.251,659.255,783.991,1046.502]
+	var starts := [0.0,0.11,0.22,0.36]
+	var lengths := [0.18,0.18,0.21,0.70]
+	var count := int(1.10*stream.mix_rate)
+	var bytes := PackedByteArray()
+	bytes.resize(count*2)
+	for i in count:
+		var seconds := float(i)/stream.mix_rate
+		var sample := 0.0
+		for note in frequencies.size():
+			var t: float=seconds-starts[note]
+			if t<0 or t>=lengths[note]: continue
+			var envelope := minf(t/0.008,1.0)*pow(1.0-t/lengths[note],1.4)
+			var phase: float=TAU*frequencies[note]*t
+			sample+=(sin(phase)+sin(phase*2)*0.12)*envelope*0.30
+			if note==3:
+				for harmony in [261.626,329.628,391.995]: sample+=sin(TAU*harmony*t)*envelope*0.055
+		bytes.encode_s16(i*2,clampi(roundi(sample*24000),-32767,32767))
+	stream.data=bytes
+	return stream
 func burst(point: Vector2, color: Color, amount := 10) -> void:
 	if reduced_motion: return
 	for i in amount:

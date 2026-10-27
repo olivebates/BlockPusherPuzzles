@@ -55,6 +55,7 @@ func run() -> void:
 	current_scene=menu
 	await settle(5)
 	verify(OS.has_feature("web") and OS.is_userfs_persistent(),"HTML5 persistent filesystem initializes")
+	verify(FileAccess.file_exists("res://version.json") and not DataVersion.release().is_empty(),"HTML5 export includes the shared version manifest")
 	verify(menu.content.get_child(0).text=="PRISMBOUND","Title screen renders in the web release")
 	var service := LevelPublisher.new()
 	service.config_path="user://tests/prismbound_web_publish.cfg"
@@ -63,6 +64,7 @@ func run() -> void:
 	root.add_child(service)
 	if phase=="read":
 		verify(slots.slot_info(0).name=="Browser Save" and slots.slot_info(0).orbs==2,"Save name and orb count survive browser reload")
+		verify(progress.read_file(slots.slot_root(0)+"/current.cps").get("v")==DataVersion.current(),"The saved data version survives browser reload")
 		verify(slots.slot_info(1).name=="Second Browser Save" and slots.slot_info(1).orbs==0,"Second slot survives reload independently")
 		verify(not slots.slot_info(2).occupied,"Confirmed slot deletion survives browser reload")
 		verify(not DirAccess.get_files_at(slots.slot_root(2)+"/backups").is_empty(),"Freed-slot backups survive browser reload")
@@ -112,6 +114,7 @@ func run() -> void:
 	player.position=Vector2(-100,-130)
 	for pickup in get_nodes_in_group("collectibles").slice(0,2): pickup.set_collected(true)
 	verify(progress.save_now(),"Browser writes a campaign save")
+	verify(progress.read_file(progress.save_root+"/current.cps").get("v")==DataVersion.current(),"HTML5 saves include the current shared version")
 	var settings: Node=current_scene.get_node("AudioSettings")
 	var game_menu := root.get_node("GameMenu")
 	game_menu.open_menu()
@@ -170,6 +173,7 @@ func run() -> void:
 	var code: String=downloaded.get("levelString","")
 	var decoded := LevelEditorCodec.decode(code)
 	verify(not decoded.is_empty() and decoded.metadata.n=="Web Puzzle","HTML5 downloads and decodes the published level")
+	verify(raw.begins_with("CPE3:") and decoded.get("v")==DataVersion.current() and CommunityCodec.metadata(code).get("v")==DataVersion.current(),"HTML5 packed and community levels include the current version")
 	var track := ReplayTrack.new()
 	track.kinds=[1,2,3]
 	track.frames=[[0,[[0,2400,10400,0,1,0,100,100,0,0,0,0],[1,5600,10400,0,0,0,0,0,0,0,0],[2,8800,10400,0,0,0]]],[2,[[0,2500,10400,0,1,0,100,100,0,0,0,0]]]]
@@ -180,6 +184,7 @@ func run() -> void:
 	verify(listing.get("replays",[]).size()==1 and listing.replays[0].comment.length()==40,"HTML5 downloads replay metadata")
 	var fetched := await service.get_replay("web-replay")
 	verify(not ReplayTrack.decode(fetched.get("replayString","")).is_empty(),"HTML5 downloads and decodes replay inputs")
+	verify(ReplayTrack.decode(fetched.get("replayString","")).get("v")==DataVersion.current(),"HTML5 replays include the current shared version")
 	var browser_publisher := LevelPublisher.new()
 	browser_publisher.config_path=service.config_path
 	root.add_child(browser_publisher)

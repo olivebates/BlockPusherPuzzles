@@ -1,5 +1,6 @@
 extends SceneTree
 var failures := 0
+var victories := 0
 func _initialize() -> void: call_deferred("run")
 func check(value: bool, message: String) -> void:
 	print(("PASS: " if value else "FAIL: ")+message)
@@ -17,6 +18,8 @@ func paint(editor: Node2D, kind: int, hue: int, cell: Vector2i) -> void:
 	editor.erase=false
 	editor.paint_at(cell)
 func run() -> void:
+	root.get_node("Juice").sound_played.connect(func(kind: String):
+		if kind=="victory": victories+=1)
 	create_timer(45,true).timeout.connect(func(): quit(99))
 	var progress := root.get_node("Progress")
 	progress.save_root="res://.godot/level-editor-test-progress"
@@ -56,9 +59,35 @@ func run() -> void:
 	check(not game.is_inside_tree() and not progress.enabled,"Main game is suspended and editor cannot autosave over progress")
 	var saved: Dictionary=progress.read_file(session.TEMP_PATH)
 	check(not saved.is_empty() and saved.player==[56.0,313.0],"Temporary file contains the main-game progress")
-	check(editor.palette_buttons.size()==12,"Palette contains walls, all four blocks and keys, both rotators, and player")
+	check(editor.palette_buttons.size()==19,"Palette includes phase walls, recall platforms, one-way blocks, three teleporters and lightning")
+	for symbol in range(1,4):
+		paint(editor,5,symbol,Vector2i(1,symbol))
+		paint(editor,5,symbol,Vector2i(2,symbol))
+		paint(editor,5,symbol,Vector2i(3,symbol))
+		check(editor.data.objects.size()==symbol*2 and is_instance_valid(editor.popup) and editor.popup.rows.get_child(0).text=="Only 2 of each teleporter may be used.","Third teleporter of each symbol shows the exact limit message")
+		editor._input(key(KEY_SPACE if symbol%2 else KEY_ESCAPE))
+		check(not is_instance_valid(editor.popup) and not editor.playing and not paused,"Space or Escape dismisses teleporter warning without starting play")
+	editor.data.objects=[]
+	paint(editor,0,0,Vector2i(1,5))
+	paint(editor,0,0,Vector2i(8,5))
+	paint(editor,18,0,Vector2i(3,5))
+	check(editor.data.objects.size()==1 and editor.lightning_cells(editor.data.objects[0])==Rect2i(2,5,6,1),"Lightning reserves the full path between walls")
+	for kind in [1,2,3,5,7,8,18,20]: paint(editor,kind,1,Vector2i(6,5))
+	check(editor.data.objects.size()==1 and not editor.data.tiles.has([6,5]),"Objects cannot be painted over a beam")
+	paint(editor,0,0,Vector2i(6,5))
+	check(editor.data.tiles.has([6,5]) and editor.lightning_cells(editor.data.objects[0])==Rect2i(2,5,4,1),"Floor tiles can cut a beam and move its opposing terminal to the new wall")
+	editor.erase=true
+	editor.last_cell=Vector2i(-1,-1)
+	editor.paint_at(Vector2i(5,5))
+	check(editor.data.objects.is_empty(),"Right click at the far end deletes the whole emitter")
+	editor.undo()
+	check(editor.data.objects.size()==1,"Undo restores the emitter and full footprint")
+	editor.data.objects=[]
+	editor.data.tiles=[]
+	editor.history.clear()
+	editor.sync_controls()
 	check(editor.palette_buttons[0].get_meta("kind")==1,"Player is first in the palette")
-	var block_preview: Node2D=editor.palette_buttons[2].get_node("Preview").get_child(0)
+	var block_preview: Node2D=editor.palette_buttons[3].get_node("Preview").get_child(0)
 	check(block_preview.material.shader.resource_path=="res://shaders/surface.gdshader","Palette blocks use the in-game animated holographic shader")
 	check(get_nodes_in_group("blocks").is_empty(),"Editor previews do not participate in gameplay physics or welding groups")
 	var view_size: Vector2=editor.get_viewport_rect().size
@@ -69,7 +98,10 @@ func run() -> void:
 	editor.close_popup()
 	paint(editor,2,1,Vector2i(3,3))
 	paint(editor,3,1,Vector2i(3,3))
-	check(editor.data.objects.size()==2,"A block and matching key can share one tile")
+	check(editor.data.objects.size()==1,"Key placement cannot overlap an existing pushable block")
+	# Previously authored overlapping layouts remain readable and erasable.
+	editor.data.objects.append([3,56,56,1,"E3_3"])
+	check(LevelEditorCodec.decode(LevelEditorCodec.encode(editor.data)).objects.size()==2,"Historical block/key overlaps remain readable")
 	editor.erase=true
 	editor.last_cell=Vector2i(-1,-1)
 	editor.stroke_saved=false
@@ -83,6 +115,11 @@ func run() -> void:
 	for item in editor.data.objects:
 		if item[0]==1: players+=1
 	check(players==1,"Placing the player again moves its single spawn")
+	paint(editor,0,0,Vector2i(3,3))
+	check(not editor.data.tiles.has([3,3]) and editor.data.objects.size()==3,"Walls cannot replace a key target or its matching block")
+	editor.erase=true
+	editor.last_cell=Vector2i(-1,-1)
+	editor.paint_at(Vector2i(3,3))
 	paint(editor,0,0,Vector2i(3,3))
 	check(editor.data.tiles.has([3,3]) and editor.data.objects.size()==1,"Walls replace overlapping objects")
 	editor.width_input.value=2
@@ -122,8 +159,8 @@ func run() -> void:
 	check(encoded.length()<JSON.stringify(editor.data).length()/2,"Packed/compressed level string is substantially smaller than JSON")
 	check(LevelEditorCodec.decode("garbage").is_empty() and LevelEditorCodec.decode("CPE1:!!!!").is_empty(),"Malformed imports are rejected")
 	var bad := Marshalls.base64_to_raw(encoded.substr(5))
-	bad.encode_u16(0,513)
-	check(LevelEditorCodec.decode("CPE1:"+Marshalls.raw_to_base64(bad)).is_empty(),"Oversized compressed payloads are rejected before decompression")
+	bad.encode_u16(2,513)
+	check(LevelEditorCodec.decode(LevelEditorCodec.PREFIX+Marshalls.raw_to_base64(bad)).is_empty(),"Oversized compressed payloads are rejected before decompression")
 	editor.background_color=Color.html(editor.data.color)
 	editor.update_theme()
 	editor.layout()
@@ -138,7 +175,7 @@ func run() -> void:
 	editor.popup._input(key(KEY_ESCAPE))
 	check(not is_instance_valid(editor.popup),"Escape closes an editor popup safely")
 	var empty_level := {"v":1,"grid":[1,1,16],"color":"000000","tiles":[],"objects":[]}
-	check(LevelEditorCodec.decode(LevelEditorCodec.encode(empty_level))==empty_level,"An unfinished draft with no player can still be exported and imported")
+	check(LevelEditorCodec.decode(LevelEditorCodec.encode(empty_level))==DataVersion.stamp(empty_level),"An unfinished draft with no player can still be exported and imported")
 	editor.show_import()
 	check(editor.popup.rows.get_child(0).text=="Paste a level code","Import displays the requested code instruction")
 	var text: TextEdit=editor.popup.rows.get_child(1)
@@ -179,6 +216,7 @@ func run() -> void:
 	block.block_color=0
 	for i in 10: await process_frame
 	check(not editor.playing and is_instance_valid(editor.popup),"Filling every key with its correct block returns to the editor")
+	check(victories==1,"Beating an editor playtest plays victory exactly once")
 	if is_instance_valid(editor.popup):
 		check(editor.popup.rows.get_child(0).text=="Good job!\n\n You beat the level!","Completion uses the requested message")
 	editor.close_popup()
@@ -202,9 +240,16 @@ func run() -> void:
 	editor=current_scene
 	check(LevelEditorCodec.encode(editor.data)==draft_code and editor.background_color.to_html(false)=="7842a6","Reopening the editor restores all saved objects, dimensions, and level color")
 	paint(editor,2,3,Vector2i(10,6))
+	paint(editor,7,0,Vector2i(12,2))
+	paint(editor,8,0,Vector2i(13,2))
+	paint(editor,20,0,Vector2i(14,2))
+	paint(editor,5,1,Vector2i(15,2))
+	paint(editor,18,0,Vector2i(12,3))
 	draft_code=LevelEditorCodec.encode(editor.data)
+	check(not draft_code.is_empty(),"Drafts containing new palette objects can be saved on Exit")
 	session.exit_editor()
 	for i in 4: await process_frame
+	check(current_scene==game,"Exit with Q platforms, one-way/pass through blocks, teleporters and lightning restores the game")
 	check(FileAccess.get_file_as_string(session.draft_path)==draft_code,"Later exits replace the previous saved draft")
 	session.close_menu()
 	progress.enabled=false

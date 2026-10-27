@@ -7,7 +7,9 @@ static func digest(bytes: PackedByteArray) -> PackedByteArray:
 	hash.update(bytes)
 	return hash.finish()
 static func encode(data: Dictionary) -> PackedByteArray:
-	var raw := JSON.stringify(data).to_utf8_buffer()
+	var current := DataVersion.stamp(data)
+	if current.is_empty(): return PackedByteArray()
+	var raw := JSON.stringify(current).to_utf8_buffer()
 	var best := raw
 	var mode := 255
 	for codec in [FileAccess.COMPRESSION_ZSTD,FileAccess.COMPRESSION_DEFLATE,FileAccess.COMPRESSION_GZIP,FileAccess.COMPRESSION_FASTLZ]:
@@ -23,6 +25,11 @@ static func encode(data: Dictionary) -> PackedByteArray:
 	bytes.append_array(best)
 	return bytes
 static func decode(bytes: PackedByteArray) -> Dictionary:
+	var data := unpack(bytes)
+	return data if DataVersion.accepts(data) else {}
+
+# Inspect the verified container before deciding whether its schema can load.
+static func unpack(bytes: PackedByteArray) -> Dictionary:
 	if bytes.size()<41 or bytes.size()>LIMIT or bytes.slice(0,4).get_string_from_ascii()!="CPS1": return {}
 	var size := bytes.decode_u32(5)
 	if size<1 or size>LIMIT: return {}
@@ -33,4 +40,4 @@ static func decode(bytes: PackedByteArray) -> Dictionary:
 	if mode!=255: raw=raw.decompress(size,mode)
 	if raw.size()!=size: return {}
 	var data: Variant=JSON.parse_string(raw.get_string_from_utf8())
-	return data if data is Dictionary and data.get("v")==1 else {}
+	return data if data is Dictionary else {}

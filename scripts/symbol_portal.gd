@@ -8,17 +8,7 @@ enum Symbol { SQUARE, CIRCLE, TRIANGLE, STAR }
 func _ready() -> void:
 	if not Engine.is_editor_hint(): add_to_group("symbol_portals")
 func _draw() -> void:
-	var orange := Color("ffac59")
-	draw_rect(Rect2(-7.5,-7.5,15,15),Color(orange,0.07))
-	draw_rect(Rect2(-7.5,-7.5,15,15),orange,false,1)
-	match symbol:
-		Symbol.SQUARE: draw_rect(Rect2(-3,-3,6,6),orange,false,0.8)
-		Symbol.CIRCLE: draw_arc(Vector2.ZERO,3.5,0,TAU,24,orange,0.8,true)
-		Symbol.TRIANGLE: draw_polyline(PackedVector2Array([Vector2(0,-4),Vector2(4,3),Vector2(-4,3),Vector2(0,-4)]),orange,0.8,true)
-		Symbol.STAR:
-			var points := PackedVector2Array()
-			for i in 11: points.append(Vector2.from_angle(-PI/2+i*PI/5)*(4.5 if i%2 == 0 else 2.0))
-			draw_polyline(points,orange,0.8,true)
+	preload("res://scripts/puzzle_art.gd").draw_portal(self,symbol)
 func transport(body: CharacterBody2D, member: Node2D) -> void:
 	var nearest: Node2D
 	var distance := INF

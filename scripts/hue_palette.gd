@@ -16,8 +16,9 @@ func wheel(shift: float) -> PackedColorArray:
 	var result := PackedColorArray()
 	for i in range(SAMPLES+1): result.append(Color.from_hsv(wrapf(float(i)/SAMPLES+shift,0.0,1.0),1,1))
 	return result
-func reset(shift: float) -> void:
+func reset(shift: float, update_target := true) -> void:
 	colors=wheel(shift)
+	if update_target: target=colors.duplicate()
 	upload()
 func begin(shift: float) -> void:
 	source=colors.duplicate()
@@ -31,10 +32,11 @@ func upload() -> void:
 	var image := Image.create_from_data(SAMPLES+1,1,false,Image.FORMAT_RGBF,pixels.to_byte_array())
 	if texture: texture.update(image)
 	else: texture=ImageTexture.create_from_image(image)
-func map_color(color: Color) -> Color:
+func map_color(color: Color, use_target := false) -> Color:
+	var samples := target if use_target and not target.is_empty() else colors
 	var position := color.h*SAMPLES
 	var index := mini(int(position),SAMPLES-1)
-	var rainbow := colors[index].lerp(colors[index+1],position-index)
+	var rainbow := samples[index].lerp(samples[index+1],position-index)
 	var result := Color.WHITE.lerp(rainbow,color.s)*color.v
 	result.a=color.a
 	return result

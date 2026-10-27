@@ -149,9 +149,6 @@ func apply_theme() -> void:
 	applied_tiles=tile_color
 	for walls in find_children("*","TileMapLayer",true,false):
 		if walls.material is ShaderMaterial: walls.material.set_shader_parameter("tile_color",tile_color)
-	for body in get_tree().get_nodes_in_group("one_way_blocks"):
-		body.tile_color = tile_color
-		body.queue_redraw()
 func sync_hue_mask() -> void:
 	if hue_exempt_view:
 		# ViewportTexture reports a stretched size again under canvas_items.
@@ -165,8 +162,6 @@ func sync_hue_mask() -> void:
 	var rects: Array[Vector4]=[]
 	var dialogue := get_node_or_null("/root/Dialogue")
 	if dialogue and dialogue.active and dialogue.panel: append_ui_rect(rects,dialogue.panel.get_global_rect())
-	var map := get_node_or_null("TeleportMap")
-	if map and map.active and map.panel: append_ui_rect(rects,map.panel.get_global_rect())
 	var settings := get_node_or_null("AudioSettings")
 	if settings:
 		if settings.menu and settings.menu.visible: append_ui_rect(rects,Rect2(settings.menu.position,settings.menu.size))
@@ -188,7 +183,8 @@ func start_hue_cycle() -> void:
 	hue_cycle_tween=create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_loops()
 	hue_cycle_tween.tween_method(func(phase: float):
 		hue_shift=wrapf(origin+phase,-0.5,0.5)
-		hue_palette.reset(hue_shift)
+		# Rainbow animation changes the world, not the map's last chosen color.
+		hue_palette.reset(hue_shift,false)
 		apply_theme(),0.0,1.0,12.0)
 func change_theme(color: Color, cycle_hue := false) -> void:
 	if theme_tween and theme_tween.is_valid(): theme_tween.kill()

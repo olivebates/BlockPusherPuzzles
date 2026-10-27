@@ -13,6 +13,7 @@ var map_opened := false
 var map_teleported := false
 var shortcut_keys := {}
 var delete_shortcut_latched := false
+var last_read_unsupported_version := false
 func _input(event: InputEvent) -> void:
 	if not enabled or get_tree().paused:
 		shortcut_keys.clear()
@@ -48,12 +49,16 @@ func bind_level(world: Node2D) -> void:
 	map_opened=false
 	map_teleported=false
 	var saved := read_file(save_root+"/current.cps")
-	if saved.is_empty(): saved=read_file(save_root+"/current.cps.previous")
+	if stop_unsupported_save(): return
+	if saved.is_empty():
+		saved=read_file(save_root+"/current.cps.previous")
+		if stop_unsupported_save(): return
 	# A reused slot keeps its old backups for manual recovery, but starts a
 	# new game instead of automatically loading one of those backups.
 	if saved.is_empty() and not SaveSlots.needs_fresh_start():
 		for backup in list_backups():
 			var candidate := read_file(backup.path)
+			if stop_unsupported_save(): return
 			if not candidate.is_empty() and candidate.scene==world.scene_file_path:
 				saved=candidate
 				break
@@ -63,6 +68,15 @@ func bind_level(world: Node2D) -> void:
 	if not opening.is_empty(): write_backup("launch",opening)
 	if not dialogues.has("opening"): Dialogue.request_once("opening",StoryLines.OPENING)
 	if save_now(): SaveSlots.finish_fresh_start()
+
+func stop_unsupported_save() -> bool:
+	if not last_read_unsupported_version: return false
+	restoring=false
+	enabled=false
+	get_tree().paused=true
+	var popup := LevelEditorUI.modal(level.get_node("GameHUD"),level.background_color,"This save uses an unsupported version.\nUse a compatible game version to load it.\nYour save and backups have been kept.",{"Back":SaveSlots.return_to_menu})
+	popup.cancel_action=SaveSlots.return_to_menu
+	return true
 func _process(delta: float) -> void:
 	if not enabled or restoring or not is_instance_valid(level) or level!=get_tree().current_scene: return
 	save_elapsed+=delta
@@ -79,7 +93,7 @@ func snapshot() -> Dictionary:
 	if not is_instance_valid(level): return {}
 	var player := get_tree().get_first_node_in_group("player") as CharacterBody2D
 	if not player: return {}
-	var data := {"v":1,"scene":level.scene_file_path,"time":Time.get_unix_time_from_system(),"player":vector(player.global_position),"dialogues":dialogues.duplicate(true),"dialogue":Dialogue.snapshot(),"blocks":[],"spheres":[],"collected":[],"indicators":[],"platforms":[],"rotators":[],"theme":[level.background_color.to_html(),level.tile_color.to_html()]}
+	var data := {"v":DataVersion.current(),"scene":level.scene_file_path,"time":Time.get_unix_time_from_system(),"player":vector(player.global_position),"dialogues":dialogues.duplicate(true),"dialogue":Dialogue.snapshot(),"blocks":[],"spheres":[],"collected":[],"indicators":[],"platforms":[],"rotators":[],"theme":[level.background_color.to_html(),level.tile_color.to_html()]}
 	data.map_tutorial={"stage":map_hint_stage,"opened":map_opened,"teleported":map_teleported}
 	data.ground_history=player.safety.save_history()
 	data.hue_shift=level.hue_shift
@@ -124,7 +138,7 @@ func valid(data: Dictionary) -> bool:
 	if not data.get("passed_doors",[]) is Array: return false
 	for key in data.get("passed_doors",[]):
 		if not key is String: return false
-	if data.get("v")!=1 or not data.get("scene","") is String: return false
+	if not DataVersion.accepts(data) or not data.get("scene","") is String: return false
 	if not vector_valid(data.get("player")): return false
 	if not data.get("ground_history",[]) is Array or data.get("ground_history",[]).size()>100: return false
 	for point in data.get("ground_history",[]):
@@ -261,17 +275,23 @@ func apply_state(data: Dictionary) -> bool:
 		camera.reset_smoothing()
 	return true
 func read_file(path: String) -> Dictionary:
+	last_read_unsupported_version=false
 	var file := FileAccess.open(path,FileAccess.READ)
 	if not file or file.get_length()>ProgressCodec.LIMIT: return {}
-	var data := ProgressCodec.decode(file.get_buffer(file.get_length()))
+	var data := ProgressCodec.unpack(file.get_buffer(file.get_length()))
+	if not data.is_empty() and not DataVersion.accepts(data):
+		last_read_unsupported_version=true
+		return {}
 	return data if valid(data) else {}
 func write_file(path: String, data: Dictionary, atomic := false) -> bool:
 	if data.is_empty(): return false
+	var bytes := ProgressCodec.encode(data)
+	if bytes.is_empty(): return false
 	if DirAccess.make_dir_recursive_absolute(path.get_base_dir())!=OK: return false
 	var target := path+".tmp" if atomic else path
 	var file := FileAccess.open(target,FileAccess.WRITE)
 	if not file: return false
-	file.store_buffer(ProgressCodec.encode(data))
+	file.store_buffer(bytes)
 	file.flush()
 	var error := file.get_error()
 	file.close()

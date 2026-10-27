@@ -12,8 +12,14 @@ static func axis_distance(body: CharacterBody2D, motion: Vector2, ignored: Array
 	var distance := absf(amount)
 	var result := distance
 	var excluded: Array[RID]=[]
-	var scene := body.get_tree().current_scene
-	var walls := scene.get_node_or_null("Walls") as TileMapLayer if scene else null
+	# Editor/community bodies live in a SubViewport world beneath the current
+	# scene. Read their own authored cells before physics quadrants catch up.
+	var ancestor := body.get_parent()
+	var walls: TileMapLayer
+	while ancestor:
+		walls=ancestor.get_node_or_null("Walls") as TileMapLayer
+		if walls: break
+		ancestor=ancestor.get_parent()
 	for collider in PuzzlePhysics.colliders(body):
 		var rect := SupportCarry.bounds(collider)
 		var swept := rect.merge(Rect2(rect.position+motion,rect.size)).grow(EPSILON)
@@ -51,6 +57,9 @@ static func axis_distance(body: CharacterBody2D, motion: Vector2, ignored: Array
 			else:
 				for other in PuzzlePhysics.colliders(obstacle):
 					if other.one_way_collision and (horizontal or sign_axis<0): continue
+					# A box entering from the side is already below the top surface;
+					# a one-way floor must not recover it upward or stop its gravity.
+					if other.one_way_collision and rect.end.y>SupportCarry.bounds(other).position.y+EPSILON: continue
 					if other.shape is CircleShape2D:
 						var radius: float=other.shape.radius
 						var offset := clampf(other.global_position.y,rect.position.y,rect.end.y)-other.global_position.y if horizontal else clampf(other.global_position.x,rect.position.x,rect.end.x)-other.global_position.x

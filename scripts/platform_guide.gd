@@ -2,6 +2,8 @@ extends Node2D
 var player: CharacterBody2D
 var nearest: Node2D
 var key_canvas: Node2D
+func owns(node: Node) -> bool:
+	return get_parent().is_ancestor_of(node)
 class KeyCanvas extends Node2D:
 	var guide: Node2D
 	func _draw() -> void:
@@ -15,11 +17,14 @@ func _ready() -> void:
 func platform_visible(platform: Node2D) -> bool:
 	return get_viewport_rect().intersects(platform.get_global_transform_with_canvas()*Rect2(-8,-2,16,4))
 func _process(_delta: float) -> void:
-	player = get_tree().get_first_node_in_group("player")
+	player = null
+	for candidate in get_tree().get_nodes_in_group("player"):
+		if owns(candidate): player=candidate
 	nearest = null
 	if player:
 		var distance := INF
 		for platform in get_tree().get_nodes_in_group("recall_platforms"):
+			if not owns(platform): continue
 			platform.nearest = false
 			if not platform.activated or not platform_visible(platform): continue
 			var next_distance: float = player.global_position.distance_squared_to(platform.global_position)
@@ -27,7 +32,7 @@ func _process(_delta: float) -> void:
 				distance = next_distance
 				nearest = platform
 		if nearest: nearest.nearest = true
-		if Input.is_action_just_pressed("recall_player"): recall()
+		if player.action_just_pressed("recall_player"): recall()
 	queue_redraw()
 	key_canvas.queue_redraw()
 func recall() -> bool:

@@ -36,12 +36,13 @@ static func unpack(prefix: String, code: String) -> Dictionary:
 static func level(code: String, puzzle_name: String, author: String, description: String) -> String:
 	if puzzle_name.strip_edges().is_empty() or author.strip_edges().is_empty(): return ""
 	if puzzle_name.length()>80 or author.length()>40 or description.length()>100: return ""
-	if code.begins_with("CPE2:"): code=str(unpack("CPE2:",code).get("l",""))
-	if not code.begins_with("CPE1:"): return ""
-	return pack("CPE2:",{"n":puzzle_name.strip_edges(),"a":author.strip_edges(),"d":description,"l":code})
+	if code.begins_with("CPE2:"): code=str(metadata(code).get("l",""))
+	if LevelEditorCodec.decode(code).is_empty(): return ""
+	return pack("CPE2:",{"v":DataVersion.current(),"n":puzzle_name.strip_edges(),"a":author.strip_edges(),"d":description,"l":code})
 
 static func metadata(code: String) -> Dictionary:
 	var value := unpack("CPE2:",code)
+	if not DataVersion.accepts(value,true): return {}
 	if not value.get("n") is String or not value.get("a") is String or not value.get("d") is String or not value.get("l") is String: return {}
-	if value.n.length()>80 or value.a.length()>40 or value.d.length()>100 or not value.l.begins_with("CPE1:"): return {}
+	if value.n.length()>80 or value.a.length()>40 or value.d.length()>100 or not (value.l.begins_with("CPE1:") or value.l.begins_with("CPE3:")): return {}
 	return value

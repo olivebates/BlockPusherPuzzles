@@ -7,7 +7,7 @@ New-Item -ItemType Directory -Path $testProjectPath -Force | Out-Null
 foreach ($folder in @('assets','scripts','scenes','shaders')) {
     Copy-Item -LiteralPath (Join-Path $workspacePath $folder) -Destination $testProjectPath -Recurse -Force
 }
-foreach ($file in @('icon.svg','export_presets.cfg')) {
+foreach ($file in @('icon.svg','export_presets.cfg','version.json')) {
     Copy-Item -LiteralPath (Join-Path $workspacePath $file) -Destination $testProjectPath -Force
 }
 $settings = [IO.File]::ReadAllText((Join-Path $workspacePath 'project.godot'))

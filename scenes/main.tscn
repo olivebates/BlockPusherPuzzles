@@ -21,25 +21,12 @@
 [ext_resource type="PackedScene" path="res://scenes/map_trigger.tscn" id="19_0ld40"]
 [ext_resource type="PackedScene" path="res://scenes/rotator_counterclockwise.tscn" id="20_gqmmt"]
 [ext_resource type="PackedScene" uid="uid://crmx8oqxi8cn5" path="res://scenes/lightning_emitter.tscn" id="21_yc10j"]
-[ext_resource type="PackedScene" path="res://scenes/elevator_block.tscn" id="22_jscy8"]
 [ext_resource type="PackedScene" path="res://scenes/completion_text.tscn" id="23_y6deb"]
 [ext_resource type="PackedScene" path="res://scenes/celebration_area.tscn" id="24_og1vs"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_2wyq8"]
 shader = ExtResource("2_a8y0u")
 shader_parameter/tile_color = Color(0.25, 0.25, 0.25, 1)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_y6deb"]
-resource_local_to_scene = true
-shader = ExtResource("7_0ld40")
-shader_parameter/tint = Color(1, 1, 1, 1)
-shader_parameter/energy = 0.0
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_og1vs"]
-resource_local_to_scene = true
-shader = ExtResource("7_0ld40")
-shader_parameter/tint = Color(1, 1, 1, 1)
-shader_parameter/energy = 0.0
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_vxglm"]
 resource_local_to_scene = true
@@ -1181,6 +1168,18 @@ shader = ExtResource("7_0ld40")
 shader_parameter/tint = Color(1, 1, 1, 1)
 shader_parameter/energy = 0.0
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_svame"]
+resource_local_to_scene = true
+shader = ExtResource("7_0ld40")
+shader_parameter/tint = Color(1, 1, 1, 1)
+shader_parameter/energy = 0.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_wfuae"]
+resource_local_to_scene = true
+shader = ExtResource("7_0ld40")
+shader_parameter/tint = Color(1, 1, 1, 1)
+shader_parameter/energy = 0.0
+
 [node name="Main" type="Node2D" unique_id=89324541]
 script = ExtResource("1_trceg")
 
@@ -1200,914 +1199,914 @@ tile_set = ExtResource("3_jkv2x")
 position = Vector2(56, 313)
 
 [node name="Block_0" parent="Objects" unique_id=520602817 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_y6deb")
+material = SubResource("ShaderMaterial_vxglm")
 position = Vector2(200, 280)
 
 [node name="Pad_0" parent="Objects" unique_id=707872133 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_og1vs")
+material = SubResource("ShaderMaterial_2f3dj")
 position = Vector2(152, 312)
 
 [node name="Block_4" parent="Objects" unique_id=1510577908 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_vxglm")
+material = SubResource("ShaderMaterial_yq6so")
 position = Vector2(344, 264)
 block_color = 3
 
 [node name="Block_5" parent="Objects" unique_id=333781635 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_2f3dj")
+material = SubResource("ShaderMaterial_fv21b")
 position = Vector2(520, 264)
 
 [node name="Pad_1" parent="Objects" unique_id=2136219585 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_yq6so")
+material = SubResource("ShaderMaterial_tel4y")
 position = Vector2(312, 264)
 block_color = 3
 id = "tut2"
 
 [node name="Pad_2" parent="Objects" unique_id=1431334428 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_fv21b")
+material = SubResource("ShaderMaterial_qkpxi")
 position = Vector2(632, 312)
 id = "tut3"
 
 [node name="Block_6" parent="Objects" unique_id=1007524334 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_tel4y")
+material = SubResource("ShaderMaterial_5q0nq")
 position = Vector2(808, 280)
 
 [node name="Block_7" parent="Objects" unique_id=203643749 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_qkpxi")
+material = SubResource("ShaderMaterial_dgi5k")
 position = Vector2(968, 24)
 
 [node name="Block_13" parent="Objects" unique_id=1417935819 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_5q0nq")
+material = SubResource("ShaderMaterial_j8jky")
 position = Vector2(520, -72)
 
 [node name="Block_25" parent="Objects" unique_id=1675383022 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_dgi5k")
+material = SubResource("ShaderMaterial_kmb1v")
 position = Vector2(888, -168)
 
 [node name="Block_14" parent="Objects" unique_id=1604828198 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_j8jky")
+material = SubResource("ShaderMaterial_fuf3a")
 position = Vector2(648, -24)
 block_color = 3
 
 [node name="Block_15" parent="Objects" unique_id=346224239 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_kmb1v")
+material = SubResource("ShaderMaterial_pibwh")
 position = Vector2(632, -40)
 block_color = 3
 
 [node name="Block_16" parent="Objects" unique_id=1248936938 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_fuf3a")
+material = SubResource("ShaderMaterial_c6pm6")
 position = Vector2(664, -40)
 block_color = 3
 
 [node name="Block_17" parent="Objects" unique_id=1616229849 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_pibwh")
+material = SubResource("ShaderMaterial_5he1u")
 position = Vector2(648, -40)
 block_color = 3
 
 [node name="Block_26" parent="Objects" unique_id=326532579 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_c6pm6")
+material = SubResource("ShaderMaterial_5poiv")
 position = Vector2(872, -200)
 block_color = 3
 
 [node name="Block_27" parent="Objects" unique_id=529250537 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_5he1u")
+material = SubResource("ShaderMaterial_2cjbq")
 position = Vector2(904, -200)
 block_color = 3
 
 [node name="Block_28" parent="Objects" unique_id=1434420942 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_5poiv")
+material = SubResource("ShaderMaterial_chjal")
 position = Vector2(888, -200)
 block_color = 3
 
 [node name="Block_29" parent="Objects" unique_id=872872550 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_2cjbq")
+material = SubResource("ShaderMaterial_cjqg0")
 position = Vector2(1240, -200)
 block_color = 3
 
 [node name="Block_34" parent="Objects" unique_id=1576083632 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_chjal")
+material = SubResource("ShaderMaterial_vchkt")
 position = Vector2(1384, -216)
 
 [node name="Block_35" parent="Objects" unique_id=137526158 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_cjqg0")
+material = SubResource("ShaderMaterial_txyw0")
 position = Vector2(1384, -248)
 
 [node name="Block_36" parent="Objects" unique_id=1076803794 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_vchkt")
+material = SubResource("ShaderMaterial_vc5cj")
 position = Vector2(1384, -232)
 
 [node name="Block_37" parent="Objects" unique_id=1715430951 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_txyw0")
+material = SubResource("ShaderMaterial_nvyfr")
 position = Vector2(1400, -248)
 
 [node name="Block_30" parent="Objects" unique_id=1766516469 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_vc5cj")
+material = SubResource("ShaderMaterial_ty1g6")
 position = Vector2(1160, -216)
 
 [node name="Block_38" parent="Objects" unique_id=138037851 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_nvyfr")
+material = SubResource("ShaderMaterial_j2jfr")
 position = Vector2(1480, -216)
 block_color = 3
 
 [node name="Block_31" parent="Objects" unique_id=1247942322 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_ty1g6")
+material = SubResource("ShaderMaterial_bjg73")
 position = Vector2(1144, -232)
 
 [node name="Block_32" parent="Objects" unique_id=59968315 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_j2jfr")
+material = SubResource("ShaderMaterial_bu4jf")
 position = Vector2(1160, -232)
 
 [node name="Block_18" parent="Objects" unique_id=1839297245 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_bjg73")
+material = SubResource("ShaderMaterial_o7ddy")
 position = Vector2(280, 72)
 
 [node name="Block_19" parent="Objects" unique_id=1034086896 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_bu4jf")
+material = SubResource("ShaderMaterial_0loja")
 position = Vector2(296, 56)
 
 [node name="Block_21" parent="Objects" unique_id=60368187 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_o7ddy")
+material = SubResource("ShaderMaterial_ids8r")
 position = Vector2(280, 56)
 
 [node name="Block_41" parent="Objects" unique_id=364363777 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_0loja")
+material = SubResource("ShaderMaterial_dnhof")
 position = Vector2(-840, 168)
 
 [node name="Block_44" parent="Objects" unique_id=1821179434 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_ids8r")
+material = SubResource("ShaderMaterial_1v6qk")
 position = Vector2(-88, 216)
 block_color = 3
 
 [node name="Block_43" parent="Objects" unique_id=224241377 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_dnhof")
+material = SubResource("ShaderMaterial_augu2")
 position = Vector2(-856, 168)
 
 [node name="Block_45" parent="Objects" unique_id=2021242430 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_1v6qk")
+material = SubResource("ShaderMaterial_tm6hj")
 position = Vector2(-824, 168)
 
 [node name="Block_49" parent="Objects" unique_id=1171582390 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_augu2")
+material = SubResource("ShaderMaterial_kf5aa")
 position = Vector2(-776, 216)
 block_color = 3
 
 [node name="Block_65" parent="Objects" unique_id=766006255 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_tm6hj")
+material = SubResource("ShaderMaterial_t5ykj")
 position = Vector2(-824, 424)
 block_color = 3
 
 [node name="Block_66" parent="Objects" unique_id=1472275462 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_kf5aa")
+material = SubResource("ShaderMaterial_e755i")
 position = Vector2(-824, 408)
 block_color = 3
 
 [node name="Block_67" parent="Objects" unique_id=418244929 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_t5ykj")
+material = SubResource("ShaderMaterial_ro3en")
 position = Vector2(-808, 408)
 block_color = 3
 
 [node name="Block_42" parent="Objects" unique_id=1663136898 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_e755i")
+material = SubResource("ShaderMaterial_od4ux")
 position = Vector2(-840, 184)
 
 [node name="Block_69" parent="Objects" unique_id=91059094 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_ro3en")
+material = SubResource("ShaderMaterial_xhfw6")
 position = Vector2(-1064, 88)
 
 [node name="Block_87" parent="Objects" unique_id=735892054 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_od4ux")
+material = SubResource("ShaderMaterial_1epgm")
 position = Vector2(-1800, 24)
 
 [node name="Block_88" parent="Objects" unique_id=1590785853 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_xhfw6")
+material = SubResource("ShaderMaterial_152kg")
 position = Vector2(-1800, -8)
 
 [node name="Block_89" parent="Objects" unique_id=246210091 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_1epgm")
+material = SubResource("ShaderMaterial_r4e17")
 position = Vector2(-1800, 8)
 
 [node name="Block_74" parent="Objects" unique_id=1915433783 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_152kg")
+material = SubResource("ShaderMaterial_y57op")
 position = Vector2(-584, 424)
 
 [node name="Block_75" parent="Objects" unique_id=119185030 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_r4e17")
+material = SubResource("ShaderMaterial_mlv25")
 position = Vector2(-584, 408)
 
 [node name="Block_82" parent="Objects" unique_id=908067874 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_y57op")
+material = SubResource("ShaderMaterial_a82wo")
 position = Vector2(-904, 648)
 block_color = 3
 
 [node name="Block_83" parent="Objects" unique_id=79588769 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_mlv25")
+material = SubResource("ShaderMaterial_gdvew")
 position = Vector2(-904, 632)
 block_color = 3
 
 [node name="Block_84" parent="Objects" unique_id=1918290603 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_a82wo")
+material = SubResource("ShaderMaterial_kjtvk")
 position = Vector2(-920, 632)
 block_color = 3
 
 [node name="Block_102" parent="Objects" unique_id=411736679 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_gdvew")
+material = SubResource("ShaderMaterial_xrs0c")
 position = Vector2(-1224, 584)
 
 [node name="Block_106" parent="Objects" unique_id=569444117 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_kjtvk")
+material = SubResource("ShaderMaterial_xljpf")
 position = Vector2(-1224, 600)
 
 [node name="Block_103" parent="Objects" unique_id=776652697 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_xrs0c")
+material = SubResource("ShaderMaterial_j4bwh")
 position = Vector2(-1224, 568)
 
 [node name="Block_104" parent="Objects" unique_id=483933674 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_xljpf")
+material = SubResource("ShaderMaterial_ksmap")
 position = Vector2(-1208, 568)
 
 [node name="Block_107" parent="Objects" unique_id=1925581867 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_j4bwh")
+material = SubResource("ShaderMaterial_ygd8o")
 position = Vector2(-1576, 552)
 
 [node name="Block_105" parent="Objects" unique_id=1775939366 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_ksmap")
+material = SubResource("ShaderMaterial_2s0kr")
 position = Vector2(-1224, 552)
 
 [node name="Block_76" parent="Objects" unique_id=1428803340 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_ygd8o")
+material = SubResource("ShaderMaterial_xaipn")
 position = Vector2(-568, 408)
 
 [node name="Block_78" parent="Objects" unique_id=942623347 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_2s0kr")
+material = SubResource("ShaderMaterial_ndrjj")
 position = Vector2(-568, 408)
 
 [node name="Block_90" parent="Objects" unique_id=734466331 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_xaipn")
+material = SubResource("ShaderMaterial_ih3m7")
 position = Vector2(-1784, 8)
 
 [node name="Block_92" parent="Objects" unique_id=2122396500 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_ndrjj")
+material = SubResource("ShaderMaterial_11yus")
 position = Vector2(-1464, 24)
 
 [node name="Block_93" parent="Objects" unique_id=1125741190 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_ih3m7")
+material = SubResource("ShaderMaterial_b6ruc")
 position = Vector2(-1464, -8)
 
 [node name="Block_71" parent="Objects" unique_id=877521504 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_11yus")
+material = SubResource("ShaderMaterial_155or")
 position = Vector2(-456, 408)
 block_color = 3
 
 [node name="Block_72" parent="Objects" unique_id=269789290 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_b6ruc")
+material = SubResource("ShaderMaterial_vtx2l")
 position = Vector2(-472, 440)
 block_color = 3
 
 [node name="Block_73" parent="Objects" unique_id=663269810 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_155or")
+material = SubResource("ShaderMaterial_63lxy")
 position = Vector2(-472, 424)
 block_color = 3
 
 [node name="Block_77" parent="Objects" unique_id=1712478463 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_vtx2l")
+material = SubResource("ShaderMaterial_fjhjs")
 position = Vector2(-472, 408)
 block_color = 3
 
 [node name="Block_85" parent="Objects" unique_id=2137415684 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_63lxy")
+material = SubResource("ShaderMaterial_bfu41")
 position = Vector2(-824, 600)
 
 [node name="Block_86" parent="Objects" unique_id=16708965 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_fjhjs")
+material = SubResource("ShaderMaterial_r4ag1")
 position = Vector2(-1096, 616)
 block_color = 3
 
 [node name="Block_100" parent="Objects" unique_id=1390256122 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_bfu41")
+material = SubResource("ShaderMaterial_v0wtd")
 position = Vector2(-1080, 616)
 block_color = 3
 
 [node name="Block_108" parent="Objects" unique_id=544520989 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_r4ag1")
+material = SubResource("ShaderMaterial_sgvw8")
 position = Vector2(-1496, 600)
 block_color = 3
 
 [node name="Block_109" parent="Objects" unique_id=1091524400 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_v0wtd")
+material = SubResource("ShaderMaterial_6nfnn")
 position = Vector2(-1480, 600)
 block_color = 3
 
 [node name="Block_110" parent="Objects" unique_id=1017870005 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_sgvw8")
+material = SubResource("ShaderMaterial_4ue30")
 position = Vector2(-1480, 568)
 block_color = 3
 
 [node name="Block_111" parent="Objects" unique_id=411782487 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_6nfnn")
+material = SubResource("ShaderMaterial_k42av")
 position = Vector2(-1480, 584)
 block_color = 3
 
 [node name="Block_101" parent="Objects" unique_id=1163742747 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_4ue30")
+material = SubResource("ShaderMaterial_gr8w0")
 position = Vector2(-808, 600)
 
 [node name="Block_112" parent="Objects" unique_id=423654244 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_k42av")
+material = SubResource("ShaderMaterial_673bd")
 position = Vector2(-824, 584)
 
 [node name="Block_113" parent="Objects" unique_id=1605922930 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_gr8w0")
+material = SubResource("ShaderMaterial_akjxb")
 position = Vector2(-808, 584)
 
 [node name="Block_94" parent="Objects" unique_id=1632561420 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_673bd")
+material = SubResource("ShaderMaterial_vrx01")
 position = Vector2(-1464, 8)
 
 [node name="Block_95" parent="Objects" unique_id=562141917 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_akjxb")
+material = SubResource("ShaderMaterial_1uevf")
 position = Vector2(-1448, 8)
 
 [node name="Block_91" parent="Objects" unique_id=805015432 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_vrx01")
+material = SubResource("ShaderMaterial_tc087")
 position = Vector2(-1720, 40)
 block_color = 3
 
 [node name="Block_97" parent="Objects" unique_id=1422960080 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_1uevf")
+material = SubResource("ShaderMaterial_73205")
 position = Vector2(-1720, 24)
 block_color = 3
 
 [node name="Block_98" parent="Objects" unique_id=747085318 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_tc087")
+material = SubResource("ShaderMaterial_0tljd")
 position = Vector2(-1704, 24)
 block_color = 3
 
 [node name="Block_99" parent="Objects" unique_id=1130102467 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_73205")
+material = SubResource("ShaderMaterial_mgpkq")
 position = Vector2(-1720, 8)
 block_color = 3
 
 [node name="Block_96" parent="Objects" unique_id=82655412 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_0tljd")
+material = SubResource("ShaderMaterial_xmrkg")
 position = Vector2(-1400, 72)
 block_color = 3
 
 [node name="Block_79" parent="Objects" unique_id=305185552 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_mgpkq")
+material = SubResource("ShaderMaterial_wvlrk")
 position = Vector2(-1048, 104)
 
 [node name="Block_80" parent="Objects" unique_id=691459473 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_xmrkg")
+material = SubResource("ShaderMaterial_engxj")
 position = Vector2(-1064, 104)
 
 [node name="Block_59" parent="Objects" unique_id=1387748833 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_wvlrk")
+material = SubResource("ShaderMaterial_raiwf")
 position = Vector2(-920, 392)
 
 [node name="Block_62" parent="Objects" unique_id=1254917309 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_engxj")
+material = SubResource("ShaderMaterial_roort")
 position = Vector2(-936, 408)
 
 [node name="Block_63" parent="Objects" unique_id=2143258430 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_raiwf")
+material = SubResource("ShaderMaterial_gm02q")
 position = Vector2(-904, 392)
 
 [node name="Block_64" parent="Objects" unique_id=976035072 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_roort")
+material = SubResource("ShaderMaterial_07pt3")
 position = Vector2(-920, 408)
 
 [node name="Block_50" parent="Objects" unique_id=1617511708 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_gm02q")
+material = SubResource("ShaderMaterial_37xlc")
 position = Vector2(-600, 200)
 
 [node name="Block_51" parent="Objects" unique_id=1872668754 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_07pt3")
+material = SubResource("ShaderMaterial_83607")
 position = Vector2(-616, 216)
 
 [node name="Block_52" parent="Objects" unique_id=204048869 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_37xlc")
+material = SubResource("ShaderMaterial_vny5k")
 position = Vector2(-584, 200)
 
 [node name="Block_54" parent="Objects" unique_id=43808282 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_83607")
+material = SubResource("ShaderMaterial_8lcmr")
 position = Vector2(-584, 216)
 
 [node name="Block_53" parent="Objects" unique_id=2113317121 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_vny5k")
+material = SubResource("ShaderMaterial_ga3rw")
 position = Vector2(-600, 216)
 
 [node name="Block_58" parent="Objects" unique_id=545592423 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_8lcmr")
+material = SubResource("ShaderMaterial_f5chs")
 position = Vector2(-328, 200)
 
 [node name="Block_60" parent="Objects" unique_id=1188095822 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_ga3rw")
+material = SubResource("ShaderMaterial_eh25q")
 position = Vector2(-312, 216)
 
 [node name="Block_61" parent="Objects" unique_id=2130983474 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_f5chs")
+material = SubResource("ShaderMaterial_joh2r")
 position = Vector2(-328, 216)
 
 [node name="Block_55" parent="Objects" unique_id=1271897078 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_eh25q")
+material = SubResource("ShaderMaterial_yton5")
 position = Vector2(-504, 216)
 
 [node name="Block_56" parent="Objects" unique_id=278784040 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_joh2r")
+material = SubResource("ShaderMaterial_4ahvx")
 position = Vector2(-488, 216)
 
 [node name="Block_57" parent="Objects" unique_id=1039241529 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_yton5")
+material = SubResource("ShaderMaterial_2cr71")
 position = Vector2(-488, 200)
 
 [node name="Block_46" parent="Objects" unique_id=617799911 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_4ahvx")
+material = SubResource("ShaderMaterial_1hbcg")
 position = Vector2(-152, 200)
 
 [node name="Block_48" parent="Objects" unique_id=1016822426 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_2cr71")
+material = SubResource("ShaderMaterial_m4o51")
 position = Vector2(-152, 184)
 
 [node name="Block_47" parent="Objects" unique_id=85741410 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_1hbcg")
+material = SubResource("ShaderMaterial_jp61a")
 position = Vector2(-152, 216)
 
 [node name="Block_11" parent="Objects" unique_id=1113501768 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_m4o51")
+material = SubResource("ShaderMaterial_esrwe")
 position = Vector2(952, 24)
 
 [node name="Block_9" parent="Objects" unique_id=688612287 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_jp61a")
+material = SubResource("ShaderMaterial_4b36k")
 position = Vector2(968, 8)
 
 [node name="Block_10" parent="Objects" unique_id=2144193318 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_esrwe")
+material = SubResource("ShaderMaterial_1v8b0")
 position = Vector2(984, 8)
 
 [node name="Block_12" parent="Objects" unique_id=1605629225 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_4b36k")
+material = SubResource("ShaderMaterial_683hg")
 position = Vector2(984, -8)
 block_color = 3
 
 [node name="Block_8" parent="Objects" unique_id=1843069397 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_1v8b0")
+material = SubResource("ShaderMaterial_ow8of")
 position = Vector2(1224, 264)
 
 [node name="Pad_4" parent="Objects" unique_id=764793836 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_683hg")
+material = SubResource("ShaderMaterial_hj4tt")
 position = Vector2(904, 312)
 id = "tut33"
 
 [node name="Pad_5" parent="Objects" unique_id=1752464533 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_ow8of")
+material = SubResource("ShaderMaterial_kqx4a")
 position = Vector2(904, 296)
 id = "tut33"
 
 [node name="Pad_7" parent="Objects" unique_id=1513507832 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_hj4tt")
+material = SubResource("ShaderMaterial_pfcs8")
 position = Vector2(968, 72)
 id = "firstMesh"
 
 [node name="Pad_10" parent="Objects" unique_id=744434958 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_kqx4a")
+material = SubResource("ShaderMaterial_50d7c")
 position = Vector2(952, 72)
 id = "firstMesh"
 
 [node name="Pad_11" parent="Objects" unique_id=583800328 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_pfcs8")
+material = SubResource("ShaderMaterial_ruytr")
 position = Vector2(952, 56)
 block_color = 3
 id = "firstMesh"
 
 [node name="Pad_12" parent="Objects" unique_id=1429490732 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_50d7c")
+material = SubResource("ShaderMaterial_la3dr")
 position = Vector2(648, 104)
 id = "BigT"
 
 [node name="Pad_20" parent="Objects" unique_id=1124140584 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_ruytr")
+material = SubResource("ShaderMaterial_hcsi8")
 position = Vector2(952, -136)
 id = "BigTtut1"
 
 [node name="Pad_21" parent="Objects" unique_id=495730289 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_la3dr")
+material = SubResource("ShaderMaterial_wi1le")
 position = Vector2(1176, -168)
 id = " BigTtut2"
 
 [node name="Pad_22" parent="Objects" unique_id=936918492 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_hcsi8")
+material = SubResource("ShaderMaterial_o7pr5")
 position = Vector2(1192, -168)
 id = " BigTtut2"
 
 [node name="Pad_24" parent="Objects" unique_id=2048313324 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_wi1le")
+material = SubResource("ShaderMaterial_hyj2l")
 position = Vector2(1448, -216)
 id = "BigTtut3"
 
 [node name="Pad_25" parent="Objects" unique_id=98607265 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_o7pr5")
+material = SubResource("ShaderMaterial_vuqay")
 position = Vector2(1496, -216)
 block_color = 3
 id = "BigTtut3"
 
 [node name="Pad_23" parent="Objects" unique_id=194732109 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_hyj2l")
+material = SubResource("ShaderMaterial_wfmv0")
 position = Vector2(1192, -152)
 id = " BigTtut2"
 
 [node name="Pad_17" parent="Objects" unique_id=457050372 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_vuqay")
+material = SubResource("ShaderMaterial_wxrqn")
 position = Vector2(-200, 200)
 id = "RotTut2"
 
 [node name="Pad_26" parent="Objects" unique_id=829114027 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_wfmv0")
+material = SubResource("ShaderMaterial_n756u")
 position = Vector2(-920, 232)
 id = "RotTut4"
 
 [node name="Pad_27" parent="Objects" unique_id=939785131 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_wxrqn")
+material = SubResource("ShaderMaterial_k33j2")
 position = Vector2(-888, 232)
 id = "RotTut4"
 
 [node name="Pad_46" parent="Objects" unique_id=991175198 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_n756u")
+material = SubResource("ShaderMaterial_2cjf7")
 position = Vector2(-888, 264)
 block_color = 3
 id = "RotTutSide"
 
 [node name="Pad_28" parent="Objects" unique_id=1404228869 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_k33j2")
+material = SubResource("ShaderMaterial_4e8e3")
 position = Vector2(-904, 232)
 id = "RotTut4"
 
 [node name="Pad_35" parent="Objects" unique_id=1127372063 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_2cjf7")
+material = SubResource("ShaderMaterial_5gihh")
 position = Vector2(-760, 424)
 block_color = 3
 id = "RotTut52"
 
 [node name="Pad_50" parent="Objects" unique_id=179505225 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_4e8e3")
+material = SubResource("ShaderMaterial_407df")
 position = Vector2(-744, 424)
 block_color = 3
 id = "RotTut52"
 
 [node name="Pad_51" parent="Objects" unique_id=1475901683 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_5gihh")
+material = SubResource("ShaderMaterial_4sqen")
 position = Vector2(-744, 440)
 block_color = 3
 id = "RotTut52"
 
 [node name="Pad_36" parent="Objects" unique_id=951398373 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_407df")
+material = SubResource("ShaderMaterial_w6a6y")
 position = Vector2(-760, 408)
 id = "RotTut52"
 
 [node name="Pad_52" parent="Objects" unique_id=1000921187 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_4sqen")
+material = SubResource("ShaderMaterial_knlx5")
 position = Vector2(-776, 408)
 id = "RotTut52"
 
 [node name="Pad_53" parent="Objects" unique_id=2024931132 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_w6a6y")
+material = SubResource("ShaderMaterial_pes4l")
 position = Vector2(-776, 424)
 id = "RotTut52"
 
 [node name="Pad_54" parent="Objects" unique_id=1482223176 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_knlx5")
+material = SubResource("ShaderMaterial_s5e0g")
 position = Vector2(-792, 424)
 id = "RotTut52"
 
 [node name="Pad_30" parent="Objects" unique_id=1083072544 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_pes4l")
+material = SubResource("ShaderMaterial_uya8e")
 position = Vector2(-648, 216)
 id = "RotTut3"
 
 [node name="Pad_31" parent="Objects" unique_id=1867939615 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_s5e0g")
+material = SubResource("ShaderMaterial_2tiby")
 position = Vector2(-376, 264)
 id = "RotTut32"
 
 [node name="Pad_32" parent="Objects" unique_id=1384058613 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_uya8e")
+material = SubResource("ShaderMaterial_1m7le")
 position = Vector2(-376, 248)
 id = "RotTut32"
 
 [node name="Pad_33" parent="Objects" unique_id=154799347 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_2tiby")
+material = SubResource("ShaderMaterial_qqwal")
 position = Vector2(-360, 264)
 id = "RotTut32"
 
 [node name="Pad_29" parent="Objects" unique_id=1707309047 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_1m7le")
+material = SubResource("ShaderMaterial_qr8e4")
 position = Vector2(-904, 216)
 id = "RotTut4"
 
 [node name="Pad_47" parent="Objects" unique_id=1853956813 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_qqwal")
+material = SubResource("ShaderMaterial_d7502")
 position = Vector2(-1208, 104)
 id = "RotTutSide2"
 
 [node name="Pad_48" parent="Objects" unique_id=1181280829 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_qr8e4")
+material = SubResource("ShaderMaterial_avynn")
 position = Vector2(-1192, 104)
 id = "RotTutSide2"
 
 [node name="Pad_49" parent="Objects" unique_id=1518988146 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_d7502")
+material = SubResource("ShaderMaterial_eo1ke")
 position = Vector2(-1192, 88)
 id = "RotTutSide2"
 
 [node name="Pad_59" parent="Objects" unique_id=1697985567 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_avynn")
+material = SubResource("ShaderMaterial_j5vj0")
 position = Vector2(-1816, 88)
 block_color = 3
 id = "RotTutSide4"
 
 [node name="Pad_62" parent="Objects" unique_id=329112789 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_eo1ke")
+material = SubResource("ShaderMaterial_kec7f")
 position = Vector2(-1848, 24)
 id = "RotTutSide4"
 
 [node name="Pad_63" parent="Objects" unique_id=206416251 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_j5vj0")
+material = SubResource("ShaderMaterial_jgau6")
 position = Vector2(-1496, 24)
 id = "RotTutSide3"
 
 [node name="Pad_64" parent="Objects" unique_id=608441098 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_kec7f")
+material = SubResource("ShaderMaterial_6a1ct")
 position = Vector2(-1592, 104)
 block_color = 3
 id = "RotTutSide3"
 
 [node name="Pad_18" parent="Objects" unique_id=1735658093 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_jgau6")
+material = SubResource("ShaderMaterial_xhrfq")
 position = Vector2(392, 56)
 id = "RotTut"
 
 [node name="Pad_34" parent="Objects" unique_id=1675191811 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_6a1ct")
+material = SubResource("ShaderMaterial_2xesh")
 position = Vector2(376, 56)
 id = "RotTut"
 
 [node name="Pad_19" parent="Objects" unique_id=1815454525 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_xhrfq")
+material = SubResource("ShaderMaterial_jexbj")
 position = Vector2(392, 72)
 id = "RotTut"
 
 [node name="Pad_8" parent="Objects" unique_id=7365028 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_2xesh")
+material = SubResource("ShaderMaterial_0n3pv")
 position = Vector2(968, 56)
 id = "firstMesh"
 
 [node name="Pad_39" parent="Objects" unique_id=1451819234 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_jexbj")
+material = SubResource("ShaderMaterial_lgnnt")
 position = Vector2(-568, 472)
 id = "RotTut6"
 
 [node name="Pad_44" parent="Objects" unique_id=899970445 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_0n3pv")
+material = SubResource("ShaderMaterial_6r4by")
 position = Vector2(-520, 424)
 block_color = 3
 id = "RotTut80"
 
 [node name="Pad_61" parent="Objects" unique_id=570791055 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_lgnnt")
+material = SubResource("ShaderMaterial_0gito")
 position = Vector2(-536, 424)
 block_color = 3
 id = "RotTut80"
 
 [node name="Pad_65" parent="Objects" unique_id=1237905275 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_6r4by")
+material = SubResource("ShaderMaterial_oh722")
 position = Vector2(-536, 440)
 block_color = 3
 id = "RotTut80"
 
 [node name="Pad_40" parent="Objects" unique_id=1789777265 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_0gito")
+material = SubResource("ShaderMaterial_m4lup")
 position = Vector2(-776, 632)
 id = "pushTut1"
 
 [node name="Pad_41" parent="Objects" unique_id=314049463 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_oh722")
+material = SubResource("ShaderMaterial_redio")
 position = Vector2(-776, 616)
 id = "pushTut1"
 
 [node name="Pad_42" parent="Objects" unique_id=11342748 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_m4lup")
+material = SubResource("ShaderMaterial_aiee3")
 position = Vector2(-760, 616)
 id = "pushTut1"
 
 [node name="Pad_45" parent="Objects" unique_id=1211702779 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_redio")
+material = SubResource("ShaderMaterial_8ojta")
 position = Vector2(-1112, 616)
 id = "pushTut2"
 
 [node name="Pad_55" parent="Objects" unique_id=865101076 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_aiee3")
+material = SubResource("ShaderMaterial_kmcm6")
 position = Vector2(-1128, 616)
 id = "pushTut2"
 
 [node name="Pad_56" parent="Objects" unique_id=850147470 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_8ojta")
+material = SubResource("ShaderMaterial_8jwmc")
 position = Vector2(-1144, 616)
 id = "pushTut2"
 
 [node name="Pad_57" parent="Objects" unique_id=715071471 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_kmcm6")
+material = SubResource("ShaderMaterial_ybi5g")
 position = Vector2(-1160, 616)
 id = "pushTut2"
 
 [node name="Pad_60" parent="Objects" unique_id=111817640 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_8jwmc")
+material = SubResource("ShaderMaterial_f4wrh")
 position = Vector2(-1576, 648)
 id = "pushTut5"
 
 [node name="Pad_58" parent="Objects" unique_id=712207364 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_ybi5g")
+material = SubResource("ShaderMaterial_smy15")
 position = Vector2(-1144, 600)
 id = "pushTut2"
 
 [node name="Pad_43" parent="Objects" unique_id=389126087 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_f4wrh")
+material = SubResource("ShaderMaterial_d51im")
 position = Vector2(-760, 632)
 id = "pushTut1"
 
 [node name="Pad_9" parent="Objects" unique_id=673104368 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_smy15")
+material = SubResource("ShaderMaterial_og54j")
 position = Vector2(984, 56)
 id = "firstMesh"
 
 [node name="Pad_6" parent="Objects" unique_id=784951990 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_d51im")
+material = SubResource("ShaderMaterial_404go")
 position = Vector2(1240, 264)
 id = "firstSplit"
 
 [node name="Block_1" parent="Objects" unique_id=1844125670 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_og54j")
+material = SubResource("ShaderMaterial_54fa5")
 position = Vector2(328, 776)
 
 [node name="Block_2" parent="Objects" unique_id=1227458843 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_404go")
+material = SubResource("ShaderMaterial_m2f0f")
 position = Vector2(456, 776)
 block_color = 1
 
 [node name="Block_3" parent="Objects" unique_id=768702440 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_54fa5")
+material = SubResource("ShaderMaterial_41mld")
 position = Vector2(680, 776)
 block_color = 2
 
 [node name="Pad_3" parent="Objects" unique_id=818578733 instance=ExtResource("9_yc10j")]
-material = SubResource("ShaderMaterial_m2f0f")
+material = SubResource("ShaderMaterial_j842w")
 position = Vector2(728, 776)
 block_color = 2
 id = "B"
 
 [node name="Door_A" parent="Objects" unique_id=1148096654 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_41mld")
+material = SubResource("ShaderMaterial_m5a64")
 position = Vector2(296, 312)
 
 [node name="Door_A2" parent="Objects" unique_id=2098698361 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_j842w")
+material = SubResource("ShaderMaterial_avkep")
 position = Vector2(712, 312)
 required_colors = 8
 id = "tut2"
 
 [node name="Door_A4" parent="Objects" unique_id=2057499527 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_m5a64")
+material = SubResource("ShaderMaterial_sxhm0")
 position = Vector2(392, 264)
 id = "tut3"
 
 [node name="Door_A3" parent="Objects" unique_id=980956583 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_avkep")
+material = SubResource("ShaderMaterial_cx1dt")
 position = Vector2(1032, 280)
 id = "tut33"
 
 [node name="Door_A5" parent="Objects" unique_id=1512532364 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_sxhm0")
+material = SubResource("ShaderMaterial_y5dkp")
 position = Vector2(1128, 152)
 id = "firstSplit"
 
 [node name="Door_A6" parent="Objects" unique_id=1149655524 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_cx1dt")
+material = SubResource("ShaderMaterial_skhuf")
 position = Vector2(824, 72)
 required_colors = 9
 id = "firstMesh"
 
 [node name="Door_A10" parent="Objects" unique_id=1871348065 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_y5dkp")
+material = SubResource("ShaderMaterial_gq2if")
 position = Vector2(1064, -136)
 id = "BigTtut1"
 
 [node name="Door_A11" parent="Objects" unique_id=1669184718 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_skhuf")
+material = SubResource("ShaderMaterial_lwxg6")
 position = Vector2(1304, -136)
 id = " BigTtut2"
 
 [node name="Door_A12" parent="Objects" unique_id=1401594235 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_gq2if")
+material = SubResource("ShaderMaterial_2b86i")
 position = Vector2(1544, -136)
 required_colors = 9
 id = "BigTtut3"
 
 [node name="Door_A7" parent="Objects" unique_id=1550602046 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_lwxg6")
+material = SubResource("ShaderMaterial_hkub5")
 position = Vector2(472, 72)
 id = "BigT"
 
 [node name="Door_A13" parent="Objects" unique_id=1208110048 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_2b86i")
+material = SubResource("ShaderMaterial_b6g1r")
 position = Vector2(-248, 200)
 id = "RotTut2"
 
 [node name="Door_A14" parent="Objects" unique_id=1800030646 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_hkub5")
+material = SubResource("ShaderMaterial_hyoe7")
 position = Vector2(-664, 264)
 id = "RotTut3"
 
 [node name="Door_A16" parent="Objects" unique_id=82688936 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_b6g1r")
+material = SubResource("ShaderMaterial_b7yds")
 position = Vector2(-424, 264)
 id = "RotTut32"
 
 [node name="Door_A15" parent="Objects" unique_id=1648772651 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_hyoe7")
+material = SubResource("ShaderMaterial_mnra2")
 position = Vector2(-968, 264)
 id = "RotTut4"
 
 [node name="Door_A19" parent="Objects" unique_id=1413145151 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_b7yds")
+material = SubResource("ShaderMaterial_jjh0s")
 position = Vector2(-936, 120)
 required_colors = 8
 id = "RotTutSide"
 
 [node name="Door_A20" parent="Objects" unique_id=951854599 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_mnra2")
+material = SubResource("ShaderMaterial_34ffc")
 position = Vector2(-1288, 104)
 id = "RotTutSide2"
 
 [node name="Door_A21" parent="Objects" unique_id=101489700 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_jjh0s")
+material = SubResource("ShaderMaterial_5eoch")
 position = Vector2(-1656, 104)
 required_colors = 9
 id = "RotTutSide3"
 
 [node name="Door_A22" parent="Objects" unique_id=616518347 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_34ffc")
+material = SubResource("ShaderMaterial_dl2iq")
 position = Vector2(-1896, -8)
 required_colors = 9
 id = "RotTutSide4"
 
 [node name="Door_A17" parent="Objects" unique_id=1891766358 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_5eoch")
+material = SubResource("ShaderMaterial_1nfnm")
 position = Vector2(-680, 456)
 required_colors = 9
 id = "RotTut52"
 
 [node name="Door_A23" parent="Objects" unique_id=1719486080 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_dl2iq")
+material = SubResource("ShaderMaterial_mm77e")
 position = Vector2(-984, 648)
 id = "pushTut1"
 
 [node name="Door_A24" parent="Objects" unique_id=786335931 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_1nfnm")
+material = SubResource("ShaderMaterial_2yqmv")
 position = Vector2(-1352, 648)
 id = "pushTut2"
 
 [node name="Door_A25" parent="Objects" unique_id=1089850186 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_mm77e")
+material = SubResource("ShaderMaterial_7x15c")
 position = Vector2(-1672, 648)
 id = "pushTut5"
 
 [node name="Door_A18" parent="Objects" unique_id=1877686588 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_2yqmv")
+material = SubResource("ShaderMaterial_888ul")
 position = Vector2(-344, 488)
 id = "RotTut6"
 
 [node name="Door_A26" parent="Objects" unique_id=958004657 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_7x15c")
+material = SubResource("ShaderMaterial_46lrq")
 position = Vector2(-616, 504)
 required_colors = 8
 id = "RotTut80"
 
 [node name="Door_A9" parent="Objects" unique_id=490690599 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_888ul")
+material = SubResource("ShaderMaterial_v41q3")
 position = Vector2(168, 72)
 id = "RotTut"
 
 [node name="Door_B" parent="Objects" unique_id=1111158846 instance=ExtResource("11_pm3ni")]
-material = SubResource("ShaderMaterial_46lrq")
+material = SubResource("ShaderMaterial_tfpxa")
 position = Vector2(792, 776)
 required_colors = 4
 id = "B"
 
 [node name="WeldedLilac0" parent="Objects" unique_id=109941775 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_v41q3")
+material = SubResource("ShaderMaterial_svame")
 position = Vector2(264, 776)
 block_color = 3
 
 [node name="WeldedLilac1" parent="Objects" unique_id=950020165 instance=ExtResource("6_dp3eg")]
-material = SubResource("ShaderMaterial_tfpxa")
+material = SubResource("ShaderMaterial_wfuae")
 position = Vector2(280, 776)
 block_color = 3
 
@@ -2315,9 +2314,6 @@ position = Vector2(-856, 408)
 
 [node name="ClockwiseRotator5" parent="." unique_id=731153763 instance=ExtResource("14_a8y0u")]
 position = Vector2(-1128, 104)
-
-[node name="ElevatorBlock" parent="." unique_id=1231791263 instance=ExtResource("22_jscy8")]
-position = Vector2(200, 776)
 
 [node name="CompletionText" parent="." unique_id=764130556 instance=ExtResource("23_y6deb")]
 z_index = 4

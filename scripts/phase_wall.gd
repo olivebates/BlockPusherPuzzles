@@ -20,8 +20,7 @@ func edge_exposed(direction: Vector2) -> bool:
 func _process(_delta: float) -> void: queue_redraw()
 func _draw() -> void:
 	if not is_inside_tree(): return
+	var edges: Array=[]
 	for direction in [Vector2.UP,Vector2.DOWN,Vector2.LEFT,Vector2.RIGHT]:
-		if not edge_exposed(direction): continue
-		for dash in range(0,16,4):
-			var point := Vector2(-8+dash,-8 if direction.y<0 else 7) if direction.y!=0 else Vector2(-8 if direction.x<0 else 7,-8+dash)
-			draw_rect(Rect2(point,Vector2(2,1) if direction.y!=0 else Vector2(1,2)),Color.WHITE)
+		if edge_exposed(direction): edges.append(direction)
+	preload("res://scripts/puzzle_art.gd").draw_pass_through(self,edges)

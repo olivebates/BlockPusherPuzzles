@@ -13,6 +13,9 @@ class Visual extends Node2D:
 	var kind := 0
 	var hue := 0
 	var on_key := false
+	var exposed_edges: Array=[Vector2.UP,Vector2.DOWN,Vector2.LEFT,Vector2.RIGHT]
+	var beam_from := Vector2(-6,0)
+	var beam_to := Vector2(6,0)
 	func _draw() -> void:
 		match kind:
 			0: draw_texture(preload("res://assets/wall.svg"),Vector2(-8,-8))
@@ -20,6 +23,13 @@ class Visual extends Node2D:
 			2: LevelEditorIcons.ART.draw_block(self,PuzzlePalette.color_for(hue),on_key)
 			3: LevelEditorIcons.ART.draw_pad(self,PuzzlePalette.color_for(hue))
 			10,11: LevelEditorIcons.ART.draw_rotator(self,kind==10)
+			5: LevelEditorIcons.ART.draw_portal(self,hue)
+			7: LevelEditorIcons.ART.draw_recall_platform(self)
+			8: LevelEditorIcons.ART.draw_one_way(self,Color("cccccc"))
+			20: LevelEditorIcons.ART.draw_pass_through(self,exposed_edges)
+			18:
+				draw_line(beam_from,beam_to,Color("8adfff"),3)
+				for end in [beam_from,beam_to]: draw_rect(Rect2(end-Vector2(1,6),Vector2(3,12)),Color("8adfff"))
 
 class Outline extends Node2D:
 	var paths: Array[PackedVector2Array]=[]

@@ -21,6 +21,10 @@ var pulse := 0.0
 var map_background := PANEL_COLOR
 var map_tiles := Color("805159")
 var explored := {}
+var seen_colors := {}
+var closest_distances := {}
+var last_player_position := Vector2.INF
+var last_colors: Array=[]
 var explored_bounds := Rect2i()
 var last_screen := Rect2i()
 func reveal_screen() -> void:
@@ -33,10 +37,24 @@ func reveal_screen() -> void:
 	var first := world_tile(area.position)
 	var end := world_tile(area.end-Vector2(0.001,0.001))
 	var region := Rect2i(first,end-first+Vector2i.ONE)
-	if region==last_screen: return
+	var colors := screen_colors()
+	var player := get_tree().get_first_node_in_group("player") as Node2D
+	if not player: return
+	var player_position := player.global_position
+	if region==last_screen and colors==last_colors and player_position==last_player_position: return
+	last_player_position=player_position
+	last_colors=colors
 	last_screen=region
 	for y in range(region.position.y,region.end.y):
-		for x in range(region.position.x,region.end.x): explored[Vector2i(x,y)]=true
+		for x in range(region.position.x,region.end.x):
+			var cell := Vector2i(x,y)
+			explored[cell]=true
+			var distance := player_position.distance_squared_to(Vector2(cell)*16+Vector2(8,8))
+			# Keep the first sample on a tie: hue changes while standing still
+			# or retreating must not replace a closer visit's colors.
+			if distance<closest_distances.get(cell,INF):
+				closest_distances[cell]=distance
+				seen_colors[cell]=colors.duplicate()
 	explored_bounds=region if explored_bounds.size==Vector2i.ZERO else explored_bounds.merge(region)
 func exploration_data() -> Array:
 	var rows := {}
@@ -59,6 +77,10 @@ func exploration_data() -> Array:
 	return result
 func restore_exploration(rows: Variant) -> void:
 	explored.clear()
+	seen_colors.clear()
+	closest_distances.clear()
+	last_player_position=Vector2.INF
+	last_colors=[]
 	explored_bounds=Rect2i()
 	last_screen=Rect2i()
 	if not rows is Array: return
@@ -74,10 +96,13 @@ func restore_exploration(rows: Variant) -> void:
 		for x in range(start,end+1): explored[Vector2i(x,y)]=true
 		var region := Rect2i(start,y,end-start+1,1)
 		explored_bounds=region if explored_bounds.size==Vector2i.ZERO else explored_bounds.merge(region)
-func update_theme() -> void:
+func screen_colors() -> Array:
 	var world := get_parent()
-	map_background=world.background_color
-	map_tiles=world.tile_color
+	return [world.hue_palette.map_color(world.background_color,true),world.hue_palette.map_color(world.tile_color,true)]
+func update_theme() -> void:
+	var colors := screen_colors()
+	map_background=colors[0]
+	map_tiles=colors[1]
 	var style := panel.get_theme_stylebox("panel") as StyleBoxFlat
 	style.bg_color=map_background
 	style.border_color=map_tiles
@@ -88,7 +113,9 @@ class MarkerView extends Control:
 	var map: CanvasLayer
 	func _draw() -> void: map.draw_markers(self)
 func _ready() -> void:
-	layer=90
+	# Remembered pixels already contain their closest-visit hue. Composite them
+	# after the world's hue pass so a new palette cannot recolor old areas.
+	layer=1001
 	process_mode=Node.PROCESS_MODE_ALWAYS
 	backdrop=ColorRect.new()
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -136,7 +163,7 @@ func _ready() -> void:
 	panel.add_child(view)
 	# Semantic marker colors stay recognizable through every world hue change.
 	marker_layer=CanvasLayer.new()
-	marker_layer.layer=1001
+	marker_layer.layer=1002
 	add_child(marker_layer)
 	marker_view=MarkerView.new()
 	marker_view.map=self
@@ -174,10 +201,10 @@ func rebuild_map() -> bool:
 	var image := Image.create(tile_bounds.size.x,tile_bounds.size.y,false,Image.FORMAT_RGBA8)
 	image.fill(Color.BLACK)
 	for cell in explored:
-		image.set_pixelv(cell-tile_bounds.position,map_background)
+		image.set_pixelv(cell-tile_bounds.position,seen_colors.get(cell,[map_background,map_tiles])[0])
 	for cell in walls.get_used_cells():
 		var pixel := world_tile(walls.to_global(walls.map_to_local(cell)))-tile_bounds.position
-		if explored.has(pixel+tile_bounds.position): image.set_pixelv(pixel,map_tiles)
+		if explored.has(pixel+tile_bounds.position): image.set_pixelv(pixel,seen_colors.get(pixel+tile_bounds.position,[map_background,map_tiles])[1])
 	for group in ["one_way_blocks"]:
 		for node in get_tree().get_nodes_in_group(group):
 			for collider in PuzzlePhysics.colliders(node):
@@ -187,7 +214,7 @@ func rebuild_map() -> bool:
 				for x in range(begin.x,end.x+1):
 					for y in range(begin.y,end.y+1):
 						var point := Vector2i(x,y)
-						if explored.has(point): image.set_pixelv(point-tile_bounds.position,Color("c2a85f") if group!="one_way_blocks" else map_tiles)
+						if explored.has(point): image.set_pixelv(point-tile_bounds.position,seen_colors.get(point,[map_background,map_tiles])[1])
 	texture=ImageTexture.create_from_image(image)
 	return true
 func selectable() -> Array[Node2D]:
@@ -289,7 +316,8 @@ func _process(delta: float) -> void:
 	if not active: reveal_screen()
 	if not active: return
 	pulse=fmod(pulse+delta*TAU/2.4,TAU)
-	if map_background!=get_parent().background_color or map_tiles!=get_parent().tile_color: rebuild_map()
+	var colors := screen_colors()
+	if map_background!=colors[0] or map_tiles!=colors[1]: rebuild_map()
 	failure=maxf(0,failure-delta)
 	view.queue_redraw()
 	marker_view.position=view.get_global_rect().position
@@ -312,7 +340,7 @@ func draw_map(canvas: Control) -> void:
 		for node in get_tree().get_nodes_in_group(group):
 			if not explored.has(world_tile(node.global_position)): continue
 			if group=="collectibles" and node.collected: continue
-			var color := map_tiles if group in ["blocks","spheres"] else Color.WHITE if group=="phase_walls" else Color("ffe38b")
+			var color: Color=seen_colors.get(world_tile(node.global_position),[map_background,map_tiles])[1] if group in ["blocks","spheres"] else Color.WHITE if group=="phase_walls" else Color("ffe38b")
 			var point := marker(node.global_position,rect)
 			if not rect.has_point(point): continue
 			if group in ["blocks","elevators","phase_walls"]: canvas.draw_rect(Rect2(point-Vector2.ONE*unit/2,Vector2.ONE*unit),color,group!="phase_walls",1 if group=="phase_walls" else -1)

@@ -141,7 +141,7 @@ func switch_to_editor() -> void:
 			editor.draft_path="user://cloud_editor_"+str(pending_level.id)+".cpe"
 	get_tree().root.add_child(editor)
 	get_tree().current_scene=editor
-	get_tree().paused=false
+	get_tree().paused=is_instance_valid(editor.popup)
 	switching=false
 
 func exit_editor() -> void:

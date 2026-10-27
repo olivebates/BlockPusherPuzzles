@@ -2,7 +2,7 @@ import { internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { COOLDOWN_MS, hotScore, validatePublish, validIdentity, validRequest } from "./validation";
-import { levelMeta } from "./codec";
+import { levelContent, levelMeta } from "./codec";
 export const publish = internalMutation({
   args: { levelString: v.string(), publisherId: v.string(), requestId: v.string() },
   handler: async (ctx, args) => {
@@ -94,7 +94,8 @@ export const edit = internalMutation({
     const nextMeta = levelMeta(args.levelString);
     if (!nextMeta) return { error: "Invalid puzzle." };
     if (owner && owner.nextPublishAt > now) return { error: "Please wait before publishing again.", retryAfterSeconds: Math.ceil((owner.nextPublishAt-now)/1000) };
-    const modified = nextMeta.l !== levelMeta(row.levelString)?.l;
+    const previousMeta = levelMeta(row.levelString);
+    const modified = !previousMeta || levelContent(nextMeta.l) !== levelContent(previousMeta.l);
     const revision = row.revision + (modified ? 1 : 0);
     await ctx.db.patch(row._id, { levelString: args.levelString, revision, editRequestId: args.requestId,
       ...(modified ? { likes: 1, hot: hotScore(1, row.publishedAt), completions: 0, resetRevision: revision } : {}) });

@@ -24,8 +24,24 @@ func run() -> void:
 	await create_timer(0.5,true).timeout
 	check(world.hue_cycling and world.hue_cycle_tween and world.hue_cycle_tween.is_running(),"A cycling changer starts a hue loop even while dialogue pauses gameplay")
 	var initial: float=world.hue_shift
+	var map := world.get_node("TeleportMap")
+	var map_colors: Array=map.screen_colors()
+	var sample: Vector2i=map.world_tile(player.global_position)+Vector2i(4,0)
+	map.closest_distances.erase(sample)
+	map.last_player_position=Vector2.INF
+	paused=false
+	map.reveal_screen()
+	paused=true
 	world.hue_cycle_tween.custom_step(3.0)
 	check(absf(wrapf(world.hue_shift-initial,-0.5,0.5)-0.25)<0.001,"The hue advances continuously through a quarter turn in three seconds")
+	check(map.screen_colors()==map_colors and not world.hue_palette.map_color(world.background_color).is_equal_approx(map_colors[0]),"Automatic rainbow cycling changes the world while the map keeps its last chosen color")
+	player.global_position.x+=16
+	paused=false
+	map.reveal_screen()
+	paused=true
+	check(map.seen_colors[sample]==map_colors,"A closer visit during rainbow cycling records the last known fixed map color")
+	map.rebuild_map()
+	check(map.map_background==map_colors[0] and map.map_tiles==map_colors[1],"Rebuilding the map during rainbow cycling keeps its panel and fallback colors stable")
 	var before_wrap: Color=world.hue_palette.map_color(HuePalette.DEFAULT_BACKGROUND)
 	world.hue_cycle_tween.custom_step(12.0)
 	check(world.hue_palette.map_color(HuePalette.DEFAULT_BACKGROUND).is_equal_approx(before_wrap) and world.hue_cycle_tween.is_running(),"A full hue turn loops without a color discontinuity or stopping")
@@ -39,10 +55,12 @@ func run() -> void:
 	var before_stop: Color=world.hue_palette.map_color(HuePalette.DEFAULT_BACKGROUND)
 	fixed.touched(player)
 	check(not world.hue_cycling and world.hue_palette.map_color(HuePalette.DEFAULT_BACKGROUND).is_equal_approx(before_stop),"A non-cycling changer stops the loop without jumping from its current color")
+	var fixed_map_colors: Array=map.screen_colors()
 	await create_timer(0.5,true).timeout
 	var final: Color=world.hue_palette.map_color(HuePalette.DEFAULT_BACKGROUND)
 	await create_timer(0.1,true).timeout
 	check(is_equal_approx(world.hue_shift,HuePalette.hue_offset(fixed.selected_color())) and world.hue_palette.map_color(HuePalette.DEFAULT_BACKGROUND).is_equal_approx(final),"The ordinary changer reaches its selected color and stays there")
+	check(map.screen_colors()==fixed_map_colors and fixed_map_colors[0].is_equal_approx(world.hue_palette.map_color(world.background_color)),"A deliberate color changer still updates the map immediately to its new target")
 	var data := LevelData.decode(LevelData.encode(LevelData.capture(world)))
 	check(data.objects.any(func(item): return item[0]==9 and item.size()==6 and item[5]==true),"Level save/load preserves the exported hue-cycle toggle")
 	for item in data.objects:

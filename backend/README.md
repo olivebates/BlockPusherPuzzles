@@ -33,6 +33,7 @@ All routes include CORS headers and accept browser preflight requests.
 | --- | --- | --- |
 | GET | `/levels?sort=hot&search=&cursor=` | Up to 50 matching entries, plus next-page cursor |
 | POST | `/levels` | Publish a level and add the uploader's initial like |
+| POST | `/validate-level` | Validate the publish body and return the supported data version without storing anything |
 | GET | `/level?id=...` | Fetch a puzzle code and revision |
 | PATCH | `/level` | Owner update, with expected revision and request ID |
 | DELETE | `/level` | Owner deletion; batched removal of related records |
@@ -102,11 +103,29 @@ in scheduled batches.
 
 ## Codes and playback
 
-CPE1 packed puzzle codes remain readable. CPE2 wraps a CPE1 code with
-`{n: name, a: author, d: description, l: puzzleCode}`.
+CPE1 packed puzzle codes remain readable. New packed levels use CPE3, adding a
+two-byte little-endian data-version header before the original CPE1 body.
+CPE2 wraps either packed format with
+`{v: dataVersion, n: name, a: author, d: description, l: puzzleCode}`.
+Older CPE2 metadata without `v` is treated as legacy version 1.
 CPR1 contains `{v, n, a, c, l, fps, kinds, frames}`: version, puzzle name,
 replay author, comment, level snapshot, tick rate, object types, and frames.
 An empty replay author becomes Anonymous.
+
+The root [`version.json`](../version.json) is the single source of truth for
+both Godot and Convex. New saves, levels, and replays use data version 3;
+readers accept versions 1–3 and reject unsupported versions. Container names
+such as CPR1 describe wire layouts, independently of the data version inside.
+See [versioning guidance](../docs/versioning.md) and the
+[changelog](../CHANGELOG.md). Deploy the updated functions before shipping a
+client that uploads CPE3 levels or version-3 replays; existing cloud records do
+not need migration.
+
+Version 3 assigns unused packed solid-cell values 7–14 to Q platforms,
+one-way blocks, pass through blocks, four portal symbols, and default lightning.
+Earlier versions keep their existing cell meanings; old drafts upgrade on save.
+Q recall uses the sixth held/pressed input bit in new replays; previous input
+bits and recorded actor layouts retain their meanings.
 
 Both envelopes use Base64 over a one-byte codec tag, a four-byte
 little-endian uncompressed length, and gzip-compressed UTF-8 JSON (or raw
@@ -162,6 +181,17 @@ From the repository root, run the bundled Godot executable with
 - `tools/test_level_publishing.gd`: completion gate, publishing form,
   real local HTTP requests, retry IDs, and cooldown persistence.
 - `tools/test_level_editor.gd`: existing editor regressions.
+- `tools/test_custom_objects.gd`: extended draft saving, custom Q platforms,
+  pass through tiling, one-way side entry, and static-object replay compatibility.
+- `tools/test_editor_floor_contact.gd`: immediate floor contact, welded blocks,
+  and pushing across repeated editor playtests without recalling blocks.
+- `tools/test_editor_lightning.gd`: bidirectional editor beams, floor insertion,
+  undo, occupied cells, and matching playtest boundaries.
+- `tools/test_editor_placement.gd`: protected key targets, floor-aligned Q
+  platform previews, and erasing at their visible position.
+- `tools/test_victory_sound.gd`: generated fanfare, paused playback, SFX routing,
+  and reserved playback when ordinary sound voices are occupied. Writes an
+  audition file to `.godot/victory-preview.wav`.
 
 The community test uses a fake cloud service. Add `-- --capture` and omit
 `--headless` to capture the browser, completion prompt, and replay viewer

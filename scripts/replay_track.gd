@@ -1,10 +1,10 @@
 class_name ReplayTrack
 extends RefCounted
 
-const ACTIONS := ["left","right","jump","down","reset_block"]
+const ACTIONS := ["left","right","jump","down","reset_block","recall_player"]
 const FPS := 60
 const MAX_IDLE_FRAMES := FPS*5
-const INPUT_BITS := 0x1f1f
+const INPUT_BITS := 0x3f3f
 const MAX_FRAMES := 108000
 const MAX_COMMENT_LENGTH := 40
 const LENGTHS := {1:12,2:11,3:6,10:7,11:7}
@@ -62,18 +62,19 @@ func capture(mask: int) -> void:
 func encode(level_code: String, author: String, comment: String) -> String:
 	var meta := CommunityCodec.metadata(level_code)
 	if meta.is_empty() or frames.size()<2 or comment.length()>MAX_COMMENT_LENGTH or author.length()>40: return ""
-	return CommunityCodec.pack("CPR1:",{"v":1,"n":meta.n,"a":"Anonymous" if author.strip_edges().is_empty() else author.strip_edges(),"c":comment,"l":level_code,"fps":FPS,"kinds":kinds,"frames":frames})
+	return CommunityCodec.pack("CPR1:",{"v":DataVersion.current(),"n":meta.n,"a":"Anonymous" if author.strip_edges().is_empty() else author.strip_edges(),"c":comment,"l":level_code,"fps":FPS,"kinds":kinds,"frames":frames})
 
 static func decode(code: String) -> Dictionary:
 	var value := CommunityCodec.unpack("CPR1:",code)
-	if value.get("v")!=1 or value.get("fps")!=FPS: return {}
+	if not DataVersion.accepts(value) or value.get("fps")!=FPS: return {}
 	for field in ["n","a","c","l"]:
 		if not value.get(field) is String: return {}
 	if value.n.length()>80 or value.a.length()>40 or value.c.length()>100 or value.a.strip_edges().is_empty(): return {}
 	var level := LevelEditorCodec.decode(value.l)
 	if level.is_empty() or not value.get("kinds") is Array or not value.get("frames") is Array: return {}
 	var expected := []
-	for item in level.objects: expected.append(int(item[0]))
+	for item in level.objects:
+		if int(item[0]) in [1,2,3,10,11]: expected.append(int(item[0]))
 	for i in value.kinds.size():
 		if not LevelData.whole(value.kinds[i]): return {}
 		value.kinds[i]=int(value.kinds[i])

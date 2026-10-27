@@ -35,6 +35,12 @@ func _process(delta: float) -> void:
 	glow = move_toward(glow,1.0 if nearest else 0.0,delta*5)
 	queue_redraw()
 func activation_rect() -> Rect2:
+	var ancestor := get_parent()
+	while ancestor:
+		if ancestor.get_meta("custom_level",false):
+			# Custom puzzles unlock a platform on first contact with its top.
+			return Rect2(global_position+Vector2(-8,-5),Vector2(16,4))
+		ancestor=ancestor.get_parent()
 	var top := global_position.y-32768
 	# Check the whole column, so even a partial ceiling stops the activation area.
 	for column in [-7.9,0,7.9]:
@@ -46,8 +52,7 @@ func activation_rect() -> Rect2:
 func arrival_position() -> Vector2:
 	return global_position+Vector2(0,-9.2)
 func _draw() -> void:
-	draw_rect(Rect2(-8,-2,16,4),Color("7d8da4"))
-	draw_line(Vector2(-7,-2),Vector2(7,-2),Color("e4f4ff"),1)
+	preload("res://scripts/puzzle_art.gd").draw_recall_platform(self)
 	if glow > 0:
 		for row in 28:
 			var strength := (1-float(row)/28)*glow

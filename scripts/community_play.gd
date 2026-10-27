@@ -114,7 +114,12 @@ func _physics_process(_delta: float) -> void:
 	if replay_code.is_empty():
 		input_mask=ReplayTrack.inputs() if not completed else 0
 	elif not replay_paused and not dragging_timeline:
-		if replay_frame<track.frames.size()-1: seek_replay(track.next_frame(replay_frame))
+		if replay_frame<track.frames.size()-1:
+			seek_replay(track.next_frame(replay_frame))
+			if replay_frame==track.frames.size()-1:
+				replay_paused=true
+				pause_button.text="Play"
+				Juice.sound("victory")
 		else:
 			replay_paused=true
 			pause_button.text="Play"
@@ -150,7 +155,8 @@ func seek_replay(frame: int) -> void:
 
 func show_completion() -> void:
 	get_tree().paused=true
-	popup=LevelEditorUI.modal(ui,background_color,"Save Replay?",{})
+	popup=LevelEditorUI.modal(ui,background_color,"Rate",{})
+	Juice.sound("victory")
 	popup.cancel_action=go_back
 	var votes := HBoxContainer.new()
 	votes.alignment=BoxContainer.ALIGNMENT_CENTER

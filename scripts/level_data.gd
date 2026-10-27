@@ -4,6 +4,20 @@ const SCENES = ["", "res://scenes/player.tscn", "res://scenes/push_block.tscn", 
 const SCRIPTS = ["", "res://scripts/player.gd", "res://scripts/block.gd", "res://scripts/pad.gd", "res://scripts/door.gd", "res://scripts/symbol_portal.gd", "res://scripts/sphere.gd", "res://scripts/recall_platform.gd", "res://scripts/one_way.gd", "res://scripts/color_trigger.gd", "res://scripts/rotator.gd", "res://scripts/rotator.gd", "res://scripts/large_door.gd", "res://scripts/collectible.gd", "res://scripts/indicator.gd", "res://scripts/npc_fox.gd", "res://scripts/dialogue_trigger.gd", "res://scripts/map_trigger.gd", "res://scripts/lightning_emitter.gd", "res://scripts/elevator.gd", "res://scripts/phase_wall.gd", "res://scripts/celebration_area.gd", "res://scripts/completion_text.gd"]
 const ICONS = ["wall", "player", "block", "key", "door", "portal", "sphere", "platform", "one_way", "color_trigger", "rotator_clockwise", "rotator_counterclockwise", "large_door", "collectible", "indicator", "npc_fox", "dialogue_trigger", "map_trigger", "lightning", "elevator", "phase_wall", "celebration_area", "completion_text"]
 const MAX_BYTES = 16777216
+static func lightning_span(data: Dictionary, item: Array) -> Rect2i:
+	var origin := Vector2i(floori(item[1]/16),floori(item[2]/16))
+	var left := maxi(0,origin.x-int(item[4]))
+	var right := mini(int(data.grid[0])-1,origin.x+int(item[4]))
+	for tile in data.tiles:
+		if tile[1]!=origin.y: continue
+		if tile[0]<origin.x: left=maxi(left,int(tile[0])+1)
+		if tile[0]>origin.x: right=mini(right,int(tile[0])-1)
+	for other in data.objects:
+		if other[0]!=8 or floori(other[2]/16)!=origin.y: continue
+		var x := floori(other[1]/16)
+		if x<origin.x: left=maxi(left,x+1)
+		if x>origin.x: right=mini(right,x-1)
+	return Rect2i(left,origin.y,right-left+1,1)
 static func platform_position(data: Dictionary, point: Vector2) -> Vector2:
 	var floor_y := INF
 	for tile in data.tiles:
@@ -14,7 +28,7 @@ static func platform_position(data: Dictionary, point: Vector2) -> Vector2:
 			floor_y = minf(floor_y,item[2]-8)
 	return Vector2(point.x,floor_y-2) if is_finite(floor_y) else point
 static func capture(level: Node) -> Dictionary:
-	var data := {"v":1,"grid":[60,34,16],"tiles":[],"objects":[]}
+	var data := {"v":DataVersion.current(),"grid":[60,34,16],"tiles":[],"objects":[]}
 	for cell in level.get_node("Walls").get_used_cells():
 		data.tiles.append([cell.x,cell.y])
 		data.grid[0] = maxi(data.grid[0],cell.x+1)
@@ -49,7 +63,7 @@ static func capture(level: Node) -> Dictionary:
 		data.grid[1] = maxi(data.grid[1],int(ceil(point.y/16)))
 	return data
 static func valid(data: Variant, require_player := true) -> bool:
-	if not data is Dictionary or data.get("v") != 1: return false
+	if not data is Dictionary or not DataVersion.accepts(data): return false
 	if not data.get("grid") is Array or data.grid.size()!=3: return false
 	if not data.get("tiles") is Array or data.tiles.size()>262144: return false
 	if not data.get("objects") is Array or data.objects.size()>10000: return false
@@ -105,7 +119,7 @@ static func normalize(data: Dictionary) -> Dictionary:
 	# JSON parses every number as float. Restore integer keys for grid editing,
 	# otherwise [25,13] no longer matches a loaded [25.0,13.0] tile.
 	var result := data.duplicate(true)
-	result.v = 1
+	result.v = int(result.v)
 	for i in 3: result.grid[i] = int(result.grid[i])
 	for tile in result.tiles:
 		tile[0] = int(tile[0])
@@ -128,7 +142,9 @@ static func normalize(data: Dictionary) -> Dictionary:
 	return result
 static func encode(data: Dictionary) -> PackedByteArray:
 	# Compact tuple arrays, no whitespace. Compare all supported lossless codecs.
-	var raw := JSON.stringify(data).to_utf8_buffer()
+	var current := DataVersion.stamp(data)
+	if current.is_empty(): return PackedByteArray()
+	var raw := JSON.stringify(current).to_utf8_buffer()
 	var best := raw
 	var mode := 255
 	for codec in [FileAccess.COMPRESSION_ZSTD,FileAccess.COMPRESSION_FASTLZ,FileAccess.COMPRESSION_DEFLATE,FileAccess.COMPRESSION_GZIP]:
@@ -187,6 +203,7 @@ static func apply(level: Node, data: Dictionary, preserve_player := false) -> bo
 			node.max_length_tiles=int(item[4])
 			node.beam_color=Color.html(item[5])
 			node.enabled=item[6]
+			if level.get_meta("custom_level",false): node.set_meta("editor_beam_cells",lightning_span(data,item))
 		if kind==19: node.speed=float(item[3])
 		if kind==21: node.size=Vector2(item[3],item[4])
 		if kind==22:

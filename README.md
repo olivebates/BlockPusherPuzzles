@@ -1,5 +1,10 @@
 # Prismbound
 
+Release and data versions live in [version.json](version.json), shared by Godot
+and Convex. The first tracked release is **1.0.0**, writing data version **2**
+and reading versions **1–2**. See [CHANGELOG.md](CHANGELOG.md) for changes between
+versions and [versioning.md](docs/versioning.md) for compatibility rules.
+
 Start with **F5** to open the animated title screen. **Play Game** offers three
 local save slots: name an empty slot, or select an existing one to continue.
 Occupied slots are lilac, show their name and a **Found** count, and keep separate
@@ -54,7 +59,7 @@ Every reusable object scene now includes an **EditorIcon** sprite using a genera
 
 The **Level Editor** button to the right of Donate opens the in-game editor menu after a one-time spoiler warning. **Make Levels** suspends the main game and writes its progress to `user://level_editor_session.tmp.cps`. The editor palette includes walls, all four block colors and matching keys, both rotators, and the player. Left click or drag to place, right click or drag to erase, and Ctrl+Z to undo. Placing another player moves the existing spawn. Blocks can share a tile with a key or rotator.
 
-The toolbar sets the level width, height, and color. Tiles are 16 by 16 pixels; dimensions are capped to the available area between the toolbar and palette. Reducing dimensions crops the level, and undo restores the previous draft where it fits. **Export** produces a compact `CPE1:` string using packed cell data, the smallest of four lossless compression codecs, and Base64. **Import** validates and loads that string, including its level color. The palette shows the player first and uses the game's object drawings and animated surface shader. Adjacent blocks of the same color merge visually with a shared outline and pivot while editing.
+The toolbar sets the level width, height, and color. Tiles are 16 by 16 pixels; dimensions are capped to the available area between the toolbar and palette. Reducing dimensions crops the level, and undo restores the previous draft where it fits. **Export** produces a compact `CPE3:` string with an explicit data version, packed cell data, the smallest of four lossless compression codecs, and Base64. **Import** validates and loads both current and legacy strings, including their level color. The palette shows the player first and uses the game's object drawings and animated surface shader. Adjacent blocks of the same color merge visually with a shared outline and pivot while editing.
 
 **Play** or Space toggles play testing without changing the draft. Use the usual game controls (W or Up jumps with the default bindings); Space always returns to editing. A reminder above the palette explains the goal during play. Filling every key with its matching block displays the victory popup and returns to editing. **Exit** saves the authored draft to `user://level_editor_draft.cpe` and returns to the screen that opened the editor. When opened from gameplay, it restores the main game from its temporary save and deletes that temporary file after a successful restore. The next editor visit restores the saved draft, including its dimensions, objects, and color. Export also lets you keep or share additional levels.
 

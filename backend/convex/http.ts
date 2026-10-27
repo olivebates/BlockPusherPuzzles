@@ -3,6 +3,7 @@ import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { MAX_CODE } from "./codec";
 import { validatePublish } from "./validation";
+import { DATA_VERSION } from "./dataVersion";
 
 const http = httpRouter();
 const cors = {
@@ -15,7 +16,7 @@ function json(body: unknown, status = 200, extra: Record<string, string> = {}) {
   return new Response(JSON.stringify(body), { status,
     headers: { ...cors, "Content-Type": "application/json", ...extra } });
 }
-const paths = ["/levels", "/level", "/attempt", "/complete", "/replays", "/replay"];
+const paths = ["/levels", "/level", "/attempt", "/complete", "/replays", "/replay", "/validate-level"];
 for (const path of paths) {
   http.route({ path, method: "OPTIONS", handler: httpAction(async () =>
     new Response(null, { status: 204, headers: cors })) });
@@ -36,7 +37,7 @@ for (const path of ["/levels", "/level", "/replays", "/replay"]) {
     } catch { return json({ error: "Couldn't load this page. Please try again." }, 400); }
   }) });
 }
-for (const [path, method] of [["/levels","POST"],["/level","PATCH"],["/level","DELETE"],["/attempt","POST"],["/complete","POST"]] as const) {
+for (const [path, method] of [["/levels","POST"],["/validate-level","POST"],["/level","PATCH"],["/level","DELETE"],["/attempt","POST"],["/complete","POST"]] as const) {
   http.route({ path, method, handler: httpAction(async (ctx, request) => {
     if (request.headers.get("Content-Type")?.split(";")[0].trim().toLowerCase() !== "application/json") return json({error:"Expected application/json."},415);
     const reader = request.body?.getReader();
@@ -57,9 +58,10 @@ for (const [path, method] of [["/levels","POST"],["/level","PATCH"],["/level","D
     } catch { return json({error:"Invalid JSON submission."},400); }
     try {
       let result;
-      if (path === "/levels") {
+      if (path === "/levels" || path === "/validate-level") {
         const valid = validatePublish(input);
         if (!valid) return json({error:"Invalid puzzle submission."},400);
+        if (path === "/validate-level") return json({ok:true, dataVersion:DATA_VERSION});
         result = await ctx.runMutation(internal.levels.publish, valid);
       } else if (path === "/attempt") result = await ctx.runMutation(internal.levels.attempt, input);
       else if (path === "/complete") result = await ctx.runMutation(internal.replays.complete, input);

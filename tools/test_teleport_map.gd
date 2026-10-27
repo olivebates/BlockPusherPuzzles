@@ -63,7 +63,7 @@ func run() -> void:
 	var large: Rect2=map.image_rect(Vector2(480,240))
 	check(rect.size.x<=240.01 and rect.size.y<=120.01 and large.size.is_equal_approx(rect.size*2),"The map grows and shrinks proportionally to fill its viewing area")
 	var panel: StyleBoxFlat=map.panel.get_theme_stylebox("panel")
-	check(panel.bg_color==game.background_color and panel.border_color==game.tile_color and panel.border_width_left==1,"The map panel uses the current game background and tile colors")
+	check(panel.bg_color==map.screen_colors()[0] and panel.border_color==map.screen_colors()[1] and panel.border_width_left==1,"The map panel uses the current game background and tile colors")
 	var map_image: Image=map.texture.get_image()
 	var wall_pixel: Vector2i=map.world_tile(walls.to_global(walls.map_to_local(Vector2i(0,20))))-map.tile_bounds.position
 	var rendered_wall := map_image.get_pixelv(wall_pixel)
@@ -77,6 +77,66 @@ func run() -> void:
 	key(KEY_TAB,true)
 	key(KEY_TAB,false)
 	check(not map.active and not paused and player.map_hint()=="TAB - Teleport","Closing the first map without teleporting upgrades the tutorial prompt")
+	var remote_cell: Vector2i=map.world_tile(far.global_position)
+	var previous_colors: Array=map.seen_colors[remote_cell].duplicate()
+	var old_background: Color=game.background_color
+	var old_tiles: Color=game.tile_color
+	var original_player: Vector2=player.global_position
+	var local_cell := Vector2i(8,19)
+	var local_wall := Vector2i(8,20)
+	var retreat_cell := Vector2i(0,19)
+	for cell in [local_cell,local_wall,retreat_cell]: map.closest_distances.erase(cell)
+	map.last_player_position=Vector2.INF
+	map.reveal_screen()
+	var first_colors: Array=map.screen_colors()
+	game.background_color=Color("123456")
+	game.tile_color=Color("abcdef")
+	map.reveal_screen()
+	check(map.seen_colors[local_cell]==first_colors,"A color change while standing still preserves the first closest-visit sample")
+	player.global_position=original_player+Vector2(16,0)
+	map.reveal_screen()
+	var nearer_colors: Array=map.screen_colors()
+	check(map.seen_colors[local_cell]==nearer_colors and map.seen_colors[local_wall]==nearer_colors,"Moving closer refreshes individual background and wall colors with a stationary camera")
+	check(map.seen_colors[retreat_cell]==first_colors,"Tiles the player moves farther from retain their earlier closer-visit colors")
+	check(map.seen_colors[remote_cell]==previous_colors,"Off-screen map cells retain their closest visible visit colors")
+	game.hue_palette.reset(0.3)
+	player.global_position=original_player
+	map.reveal_screen()
+	check(map.seen_colors[local_cell]==nearer_colors,"A later hue change from farther away cannot overwrite a closer visit")
+	player.global_position=original_player+Vector2(32,0)
+	map.reveal_screen()
+	var shifted_colors: Array=map.screen_colors()
+	check(map.seen_colors[local_cell]==shifted_colors and shifted_colors!=[game.background_color,game.tile_color],"A new closest visit captures the shader-transformed displayed colors")
+	var best_distance: float=map.closest_distances[local_cell]
+	game.hue_palette.reset(-0.2)
+	map.reveal_screen()
+	check(map.closest_distances[local_cell]==best_distance and map.seen_colors[local_cell]==shifted_colors,"Equal-distance visits keep the existing closest color")
+	map.rebuild_map()
+	var map_pixels: Image=map.texture.get_image()
+	var local_pixel: Color=map_pixels.get_pixelv(local_cell-map.tile_bounds.position)
+	var wall_color: Color=map_pixels.get_pixelv(local_wall-map.tile_bounds.position)
+	var remembered_background: Color=shifted_colors[0]
+	var remembered_wall: Color=shifted_colors[1]
+	check(Vector3(local_pixel.r-remembered_background.r,local_pixel.g-remembered_background.g,local_pixel.b-remembered_background.b).length()<0.007 and Vector3(wall_color.r-remembered_wall.r,wall_color.g-remembered_wall.g,wall_color.b-remembered_wall.b).length()<0.007,"Map renders each closest-visit background and wall color independently of the current shader")
+	check(map.layer>game.get_node("HueShift").layer and map.marker_layer.layer>map.layer,"Map pixels and markers render after the global hue shader")
+	game.hue_palette.begin(0.4)
+	game.hue_palette.blend(0.2)
+	player.global_position=original_player+Vector2(40,0)
+	map.reveal_screen()
+	var target_colors: Array=map.screen_colors()
+	var transition_colors := [game.hue_palette.map_color(game.background_color),game.hue_palette.map_color(game.tile_color)]
+	check(target_colors!=transition_colors and map.seen_colors[local_cell]==target_colors,"Closest-visit colors use the transition target rather than an intermediate blend")
+	game.hue_palette.blend(0.7)
+	check(map.screen_colors()==target_colors,"Map target colors stay stable throughout a hue transition")
+	game.hue_palette.begin(-0.1)
+	player.global_position=original_player+Vector2(48,0)
+	map.reveal_screen()
+	check(map.seen_colors[local_cell]==map.screen_colors() and map.screen_colors()!=target_colors,"An interrupted transition captures its new target on a closer visit")
+	game.background_color=old_background
+	game.tile_color=old_tiles
+	game.hue_palette.reset(0.0)
+	player.global_position=original_player
+	map.reveal_screen()
 	check(map.open_map(),"The map can be reopened")
 	var click := InputEventMouseButton.new()
 	click.button_index=MOUSE_BUTTON_LEFT

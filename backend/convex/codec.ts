@@ -1,4 +1,5 @@
 import { Gunzip, gzipSync, strFromU8, strToU8 } from "fflate";
+import { acceptsVersion, LEGACY_DATA_VERSION, readableVersion } from "./dataVersion";
 export const MAX_CODE = 900_000;
 export const MAX_REPLAY_COMMENT = 40;
 const MAX_RAW = 32 * 1024 * 1024;
@@ -48,25 +49,38 @@ export function text(value: unknown, max: number, required = false): value is st
   return typeof value === "string" && [...value].length <= max &&
     (!required || value.trim().length > 0) && !/[\u0000-\u001f\u007f]/.test(value);
 }
-export function validLevelEnvelope(level: string): boolean {
-  if (level.length > 524288 || !level.startsWith("CPE1:")) return false;
+// Versions 1/2 keep their cell meanings; version 3 uses spare solid nibbles
+// for platforms, one-way/pass-through blocks, portals, and default lightning.
+// Their dimensions, palette, compression header and cell count are unchanged.
+// Canonical packed body, excluding the version header. Upgrading only
+// the container must not count as editing the puzzle or erase its replays.
+export function levelContent(level: string): string | null {
+  const versioned = level.startsWith("CPE3:");
+  if (level.length > 524288 || (!versioned && !level.startsWith("CPE1:"))) return null;
   const base = level.slice(5);
-  if (base.length % 4 || !/^[A-Za-z0-9+/]*={0,2}$/.test(base)) return false;
+  if (base.length % 4 || !/^[A-Za-z0-9+/]*={0,2}$/.test(base)) return null;
   const data = atob(base);
-  if (data.length < 9 || btoa(data) !== base) return false;
-  const w = data.charCodeAt(0) | data.charCodeAt(1) << 8;
-  const h = data.charCodeAt(2) | data.charCodeAt(3) << 8;
-  return w >= 1 && w <= 512 && h >= 1 && h <= 512 && [0,1,2,3,255].includes(data.charCodeAt(7));
+  const offset = versioned ? 2 : 0;
+  if (data.length < offset + 9 || btoa(data) !== base) return null;
+  const version = versioned ? data.charCodeAt(0) | data.charCodeAt(1) << 8 : LEGACY_DATA_VERSION;
+  if (!readableVersion(version)) return null;
+  const w = data.charCodeAt(offset) | data.charCodeAt(offset + 1) << 8;
+  const h = data.charCodeAt(offset + 2) | data.charCodeAt(offset + 3) << 8;
+  return w >= 1 && w <= 512 && h >= 1 && h <= 512 && [0,1,2,3,255].includes(data.charCodeAt(offset + 7))
+    ? "CPE1:" + btoa(data.slice(offset)) : null;
+}
+export function validLevelEnvelope(level: string): boolean {
+  return levelContent(level) !== null;
 }
 export function levelMeta(code: unknown) {
   const value = unpack("CPE2:", code);
-  if (!value || !text(value.n, 80, true) || !text(value.a, 40, true) || !text(value.d, 100) ||
+  if (!value || !acceptsVersion(value, true) || !text(value.n, 80, true) || !text(value.a, 40, true) || !text(value.d, 100) ||
       typeof value.l !== "string" || !validLevelEnvelope(value.l)) return null;
   return value as { n: string; a: string; d: string; l: string };
 }
 export function replayMeta(code: unknown) {
   const value = unpack("CPR1:", code);
-  if (!value || value.v !== 1 || !text(value.n, 80, true) || !text(value.a, 40, true) ||
+  if (!value || !acceptsVersion(value) || !text(value.n, 80, true) || !text(value.a, 40, true) ||
       !text(value.c, 100) || !levelMeta(value.l) || value.fps !== 60 ||
       !Array.isArray(value.kinds) || value.kinds.length > 10000 ||
       !value.kinds.every((k: unknown) => [1,2,3,10,11].includes(k as number)) ||

@@ -3,9 +3,10 @@ const TOP := 48
 const BOTTOM := 88
 var draft_path := "user://level_editor_draft.cpe"
 var initial_level_code := ""
+var incompatible_draft := false
 var fit_grid_to_view := true
 var background_color := HuePalette.DEFAULT_BACKGROUND
-var data := {"v":1,"grid":[40,20,16],"color":"", "tiles":[],"objects":[]}
+var data := {"v":DataVersion.current(),"grid":[40,20,16],"color":"", "tiles":[],"objects":[]}
 var selected_kind := 0
 var selected_hue := 0
 var playing := false
@@ -20,6 +21,7 @@ var ui: Control
 var palette: HBoxContainer
 var palette_buttons: Array[Button]=[]
 var popup: Control
+var teleporter_warning := false
 var play_view: SubViewportContainer
 var play_viewport: SubViewport
 var world: Node2D
@@ -68,11 +70,16 @@ class Board extends Control:
 		var keys := {}
 		for item in editor.data.objects:
 			if item[0]==2: continue
-			var hue: int=int(item[3]) if item[0]==3 else 0
+			var hue: int=int(item[3]) if item[0] in [3,5] else 0
 			var visual := LevelEditorIcons.create(item[0],hue,editor.background_color)
-			visual.position=Vector2(item[1],item[2])
+			visual.position=editor.object_position(item)
+			if item[0]==20: visual.exposed_edges=editor.pass_through_edges(visual.position)
 			visual.z_index=4 if item[0] in [10,11] else 3 if item[0]==1 else 0
 			content.add_child(visual)
+			if item[0]==18:
+				var span: Rect2i=editor.lightning_cells(item)
+				visual.beam_from=Vector2(span.position.x*16+2-item[1],0)
+				visual.beam_to=Vector2(span.end.x*16-2-item[1],0)
 			if item[0]==3: keys[visual.position]=hue
 		for component in LevelEditorIcons.block_components(editor.data.objects):
 			var group := LevelEditorIcons.block_group(component.points,component.hue,keys)
@@ -91,6 +98,12 @@ class Board extends Control:
 		var mouse := get_local_mouse_position()
 		ghost.visible=is_visible_in_tree() and Rect2(Vector2.ZERO,size).has_point(mouse) and not is_instance_valid(editor.popup)
 		ghost.position=(mouse/16).floor()*16+Vector2(8,8)
+		if editor.selected_kind==7: ghost.position=LevelData.platform_position(editor.data,ghost.position)
+		if editor.selected_kind==18:
+			var span: Rect2i=editor.lightning_cells([18,ghost.position.x,ghost.position.y,0,128,"8adfffff",true])
+			ghost.beam_from=Vector2(span.position.x*16+2-ghost.position.x,0)
+			ghost.beam_to=Vector2(span.end.x*16-2-ghost.position.x,0)
+			ghost.queue_redraw()
 	func _draw() -> void:
 		draw_rect(Rect2(Vector2.ZERO,size),editor.background_color)
 		for x in range(0,int(size.x)+1,16): draw_line(Vector2(x,0),Vector2(x,size.y),Color(1,1,1,0.09))
@@ -151,14 +164,19 @@ func _ready() -> void:
 	bottom.add_child(bottom_rows)
 	palette=HBoxContainer.new()
 	palette.alignment=BoxContainer.ALIGNMENT_CENTER
-	palette.add_theme_constant_override("separation",6)
+	palette.add_theme_constant_override("separation",2)
 	bottom_rows.add_child(palette)
 	add_tool(1,0,"Player")
 	add_tool(0,0,"Wall")
+	add_tool(7,0,"Q teleport platform")
 	for hue in 4: add_tool(2,hue,PuzzlePalette.NAMES[hue].capitalize()+" block")
 	for hue in 4: add_tool(3,hue,PuzzlePalette.NAMES[hue].capitalize()+" key")
 	add_tool(10,0,"Clockwise rotator")
 	add_tool(11,0,"Counterclockwise rotator")
+	add_tool(20,0,"Pass through block")
+	add_tool(8,0,"One-way block")
+	for symbol in range(1,4): add_tool(5,symbol,["Square","Circle","Triangle","Star"][symbol]+" teleporter")
+	add_tool(18,0,"Lightning emitter")
 	var hint := Label.new()
 	hint.text="Left click: place    Right click: erase    Space: play / edit    Ctrl+Z: undo"
 	hint.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
@@ -211,6 +229,11 @@ func _ready() -> void:
 	sync_controls()
 	select_tool(1,0)
 	layout()
+	if incompatible_draft:
+		show_message("This level uses an unsupported version.\nUse a compatible game version to open it.\nYour saved draft has been kept.")
+		popup.actions.get_child(0).pressed.disconnect(close_popup)
+		popup.actions.get_child(0).pressed.connect(LevelEditorSession.exit_editor)
+		popup.cancel_action=LevelEditorSession.exit_editor
 
 func add_dimension(bar: HBoxContainer, caption: String) -> SpinBox:
 	var label := Label.new()
@@ -228,6 +251,7 @@ func add_dimension(bar: HBoxContainer, caption: String) -> SpinBox:
 
 func load_draft() -> void:
 	if not initial_level_code.is_empty():
+		incompatible_draft=LevelEditorCodec.unsupported_version(initial_level_code)
 		var initial := LevelEditorCodec.decode(initial_level_code)
 		if not initial.is_empty():
 			data=initial
@@ -236,12 +260,15 @@ func load_draft() -> void:
 	if not FileAccess.file_exists(draft_path): return
 	var file := FileAccess.open(draft_path,FileAccess.READ)
 	if not file or file.get_length()>LevelEditorCodec.MAX_CELLS*2: return
-	var saved := LevelEditorCodec.decode(file.get_as_text())
+	var code := file.get_as_text()
+	incompatible_draft=LevelEditorCodec.unsupported_version(code)
+	var saved := LevelEditorCodec.decode(code)
 	if saved.is_empty(): return
 	data=saved
 	background_color=Color.html(data.color)
 
 func save_draft() -> bool:
+	if incompatible_draft: return true # Exit without touching the unsupported file.
 	var encoded := LevelEditorCodec.encode(data)
 	if encoded.is_empty(): return false
 	var file := FileAccess.open(draft_path+".tmp",FileAccess.WRITE)
@@ -256,7 +283,7 @@ func save_draft() -> bool:
 
 func add_tool(kind: int, hue: int, caption: String) -> void:
 	var button := LevelEditorUI.button("",func(): select_tool(kind,hue))
-	button.custom_minimum_size=Vector2(40,36)
+	button.custom_minimum_size=Vector2(30,36)
 	button.tooltip_text=caption
 	button.set_meta("kind",kind)
 	button.set_meta("hue",hue)
@@ -354,7 +381,55 @@ func paint_at(cell: Vector2i) -> void:
 	board.rebuild_visuals()
 	board.queue_redraw()
 
+func lightning_cells(item: Array) -> Rect2i:
+	return LevelData.lightning_span(data,item)
+
+func object_position(item: Array) -> Vector2:
+	var point := Vector2(item[1],item[2])
+	return LevelData.platform_position(data,point) if item[0]==7 else point
+
+func object_cell(item: Array) -> Vector2i:
+	return Vector2i((object_position(item)/16).floor())
+
+func pass_through_edges(point: Vector2) -> Array:
+	var edges: Array=[]
+	for direction in [Vector2.UP,Vector2.DOWN,Vector2.LEFT,Vector2.RIGHT]:
+		var neighbor: Vector2=point+direction*16
+		var cell := Vector2i((neighbor/16).floor())
+		if data.tiles.has([cell.x,cell.y]): continue
+		if data.objects.any(func(item: Array): return item[0]==20 and Vector2(item[1],item[2]).distance_to(neighbor)<0.2): continue
+		edges.append(direction)
+	return edges
+
 func paint_cell(cell: Vector2i) -> void:
+	if is_instance_valid(popup): return
+	var destination := Vector2(cell)*16+Vector2(8,8)
+	if selected_kind==7: destination=LevelData.platform_position(data,destination)
+	var destination_cell := Vector2i((destination/16).floor())
+	if not erase:
+		for existing in data.objects:
+			if object_cell(existing)!=destination_cell: continue
+			if existing[0]==3 and selected_kind!=3: return
+			if selected_kind==3 and existing[0]!=3: return
+	var erased_beams: Array=[]
+	for existing in data.objects:
+		if existing[0]!=18 or not lightning_cells(existing).has_point(cell): continue
+		if erase: erased_beams.append(existing)
+		elif selected_kind!=0: return
+	if not erase and selected_kind==5:
+		var count := 0
+		for existing in data.objects:
+			if existing[0]==5 and existing[3]==selected_hue and Vector2(existing[1],existing[2])!=Vector2(cell)*16+Vector2(8,8): count+=1
+		if count>=2:
+			painting=false
+			show_message("Only 2 of each teleporter may be used.")
+			teleporter_warning=true
+			return
+	if not erase and selected_kind==18:
+		var candidate := [18,cell.x*16+8,cell.y*16+8,0,128,"8adfffff",true]
+		var span := lightning_cells(candidate)
+		for existing in data.objects:
+			if span.has_point(Vector2i(floori(existing[1]/16),floori(existing[2]/16))) or (existing[0]==18 and span.intersects(lightning_cells(existing))): return
 	var before := data.duplicate(true)
 	if not stroke_saved:
 		remember_edit()
@@ -363,18 +438,27 @@ func paint_cell(cell: Vector2i) -> void:
 	var point := Vector2(cell)*16+Vector2(8,8)
 	if erase:
 		data.tiles.erase(tile)
-		data.objects=data.objects.filter(func(item: Array): return Vector2(item[1],item[2])!=point)
+		data.objects=data.objects.filter(func(item: Array): return not erased_beams.has(item) if item[0]==18 else object_cell(item)!=cell)
 	elif selected_kind==0:
+		# Painting over the authored origin keeps the remaining larger side.
+		# Move the hidden anchor before the wall replaces objects at this cell.
+		for existing in data.objects:
+			if existing[0]!=18 or Vector2(existing[1],existing[2])!=point: continue
+			var span := lightning_cells(existing)
+			if span.size.x<=1: continue
+			existing[1]+=16 if span.end.x-cell.x-1>=cell.x-span.position.x else -16
 		if not data.tiles.has(tile): data.tiles.append(tile)
-		data.objects=data.objects.filter(func(item: Array): return Vector2(item[1],item[2])!=point)
+		data.objects=data.objects.filter(func(item: Array): return object_cell(item)!=cell)
 	else:
 		data.tiles.erase(tile)
 		var marker := selected_kind in [3,10,11]
 		data.objects=data.objects.filter(func(item: Array):
 			if selected_kind==1 and item[0]==1: return false
-			return Vector2(item[1],item[2])!=point or (item[0] in [3,10,11])!=marker)
+			return object_cell(item)!=destination_cell or (item[0] in [3,10,11])!=marker)
 		var item := [selected_kind,point.x,point.y]
 		if selected_kind==2: item.append_array([selected_hue,0.2,0.15])
+		elif selected_kind==5: item.append(selected_hue)
+		elif selected_kind==18: item.append_array([0,128,"8adfffff",true])
 		elif selected_kind==3: item.append_array([selected_hue,"E%d_%d"%[cell.x,cell.y]])
 		data.objects.append(item)
 	if before!=data: invalidate_completion()
@@ -397,6 +481,7 @@ func update_theme() -> void:
 	board.queue_redraw()
 
 func close_popup() -> void:
+	teleporter_warning=false
 	cooldown_label=null
 	if is_instance_valid(cooldown_timer): cooldown_timer.queue_free()
 	cooldown_timer=null
@@ -496,6 +581,7 @@ func start_play() -> void:
 	playing=true
 	play_frames=0
 	world=Node2D.new()
+	world.set_meta("custom_level",true)
 	world.process_mode=Node.PROCESS_MODE_PAUSABLE
 	var walls := TileMapLayer.new()
 	walls.name="Walls"
@@ -512,6 +598,10 @@ func start_play() -> void:
 	set_meta("effects_root",world)
 	set_meta("fall_limit",data.grid[1]*16+32)
 	LevelData.apply(world,data)
+	var guide := Node2D.new()
+	guide.name="PlatformGuide"
+	guide.set_script(preload("res://scripts/platform_guide.gd"))
+	world.add_child(guide)
 	play_view.show()
 	board.hide()
 	set_edit_enabled(false)
@@ -558,6 +648,7 @@ func _process(_delta: float) -> void:
 	var open_upload := publishing_test
 	verified_level_code=test_level_code if LevelEditorCodec.encode(data)==test_level_code else ""
 	stop_play()
+	Juice.sound("victory")
 	if open_upload: show_upload_prompt()
 	else: show_message("Good job!\n\n You beat the level!")
 
@@ -692,8 +783,12 @@ func upload_level() -> void:
 
 func _input(event: InputEvent) -> void:
 	if not event is InputEventKey or not event.pressed or event.echo: return
-	if is_instance_valid(popup): return
 	var code: int=event.physical_keycode if event.physical_keycode else event.keycode
+	if is_instance_valid(popup):
+		if teleporter_warning and code in [KEY_SPACE,KEY_ESCAPE]:
+			get_viewport().set_input_as_handled()
+			close_popup()
+		return
 	if code==KEY_SPACE:
 		get_viewport().set_input_as_handled()
 		Input.action_release("jump")

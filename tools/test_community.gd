@@ -1,5 +1,6 @@
 extends SceneTree
 var failures := 0
+var victories := 0
 
 class FakeCloud extends LevelPublisher:
 	var code := ""
@@ -25,6 +26,8 @@ func check(condition: bool, message: String) -> void:
 	if not condition: failures+=1
 
 func run() -> void:
+	root.get_node("Juice").sound_played.connect(func(kind: String):
+		if kind=="victory": victories+=1)
 	create_timer(60,true).timeout.connect(func(): quit(99))
 	var session := root.get_node("LevelEditorSession")
 	var progress := root.get_node("Progress")
@@ -123,7 +126,8 @@ func run() -> void:
 		if play.completed: break
 	Input.action_release("right")
 	for i in 4: await process_frame
-	check(play.completed and paused and play.popup.rows.get_child(0).text=="Save Replay?","A real playthrough reaches the Save Replay completion prompt")
+	check(play.completed and paused and play.popup.rows.get_child(0).text=="Rate","A real playthrough reaches the Rate completion prompt")
+	check(victories==1,"Opening the Rate prompt plays one victory sound while paused")
 	check(play.replay_comment.max_length==40 and play.replay_author.placeholder_text=="Anonymous","Replay prompt limits comments to 40 characters and offers an anonymous author")
 	check(fake.calls.back().path=="/complete" and not fake.calls.back().payload.has("replayString"),"Completion is recorded even before saving a replay")
 	play.like_button.pressed.emit()
@@ -164,6 +168,7 @@ func run() -> void:
 	watch.replay_paused=true
 	check(watch.ready_to_play and watch.timeline.max_value==recording.frames.size()-1,"Replay mode opens with a timeline covering the full recording")
 	watch.seek_replay(0)
+	var before_scrubbing := victories
 	var actor: Node2D=watch.track.actors[0]
 	var start_position := actor.position
 	watch.timeline.value=watch.track.frames.size()-1
@@ -171,6 +176,7 @@ func run() -> void:
 	check(end_position!=start_position,"Dragging the timeline forward restores the completed puzzle state")
 	watch.timeline.value=0
 	check(actor.position==start_position,"Dragging backwards restores the starting state")
+	check(victories==before_scrubbing,"Scrubbing to the end and back does not play a victory sound")
 	watch.seek_replay(watch.track.frames.size()/2)
 	var middle_position := actor.position
 	var recorded_mask: int=watch.input_mask
@@ -178,6 +184,16 @@ func run() -> void:
 	for i in 10: await physics_frame
 	Input.action_release("left")
 	check(actor.position==middle_position and watch.input_mask==recorded_mask,"Live keyboard movement cannot change replay playback")
+	watch.seek_replay(watch.track.frames.size()-2)
+	watch.replay_paused=false
+	watch._physics_process(1.0/60)
+	check(victories==before_scrubbing+1 and watch.replay_paused and watch.pause_button.text=="Play","Natural replay completion plays victory once and pauses immediately")
+	for i in 4: watch._physics_process(1.0/60)
+	check(victories==before_scrubbing+1,"An ended replay does not repeat victory on subsequent frames")
+	watch.seek_replay(watch.track.frames.size()-2)
+	watch.replay_paused=false
+	watch._physics_process(1.0/60)
+	check(victories==before_scrubbing+2,"Replaying the ending can celebrate a new playback completion")
 	var idle_recording: Dictionary=replay_data.duplicate(true)
 	var idle_frames: Array=[replay_data.frames[0].duplicate(true)]
 	for i in 660: idle_frames.append([0,[]])

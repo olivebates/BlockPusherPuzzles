@@ -30,6 +30,16 @@ func _ready() -> void:
 	rng.randomize()
 	if not Engine.is_editor_hint(): add_to_group("lightning_emitters")
 func update_endpoint() -> void:
+	if has_meta("editor_beam_cells"):
+		# Editor hazards occupy the same symmetric, wall-bounded cells in play.
+		var span: Rect2i=get_meta("editor_beam_cells")
+		source_face=Vector2(span.position.x*16-position.x,0)
+		end_face=Vector2(span.end.x*16-position.x,0)
+		beam_start=source_face+Vector2(4,0)
+		beam_end=end_face-Vector2(4,0)
+		mounted=true
+		hit_wall=true
+		return
 	var axis := Vector2(1 if direction==0 else -1,0)
 	var back := ray_hit(global_position,global_position-axis*max_length_tiles*16)
 	mounted=not back.is_empty()
@@ -105,7 +115,7 @@ func draw_terminal(face: Vector2, facing: float) -> void:
 	draw_rect(Rect2(left+0.5,face.y-5.5,3,11),beam_color,false,1)
 	draw_rect(Rect2(left+(3 if facing>0 else 0),face.y-2,1,4),Color.WHITE if enabled else beam_color.darkened(0.5))
 func _draw() -> void:
-	var sign_x := 1 if direction==0 else -1
+	var sign_x := 1 if direction==0 or has_meta("editor_beam_cells") else -1
 	if Engine.is_editor_hint():
 		draw_terminal(Vector2(-sign_x*4,0),sign_x)
 		draw_dashed_line(Vector2(sign_x*5,0),Vector2(sign_x*32,0),Color(beam_color,0.5),1,3)
