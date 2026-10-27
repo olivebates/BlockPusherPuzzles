@@ -59,6 +59,21 @@ func _ready() -> void:
 		button.anchor_bottom=1
 		button.clip_contents=true
 		bar.add_child(button)
+	var credit := Label.new()
+	credit.name="WebsiteCredit"
+	credit.text="snugglefox.net"
+	credit.add_theme_font_size_override("font_size",10)
+	credit.add_theme_color_override("font_color",Color.WHITE)
+	credit.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	credit.horizontal_alignment=HORIZONTAL_ALIGNMENT_LEFT
+	credit.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	credit.offset_left=6
+	credit.offset_right=160
+	credit.offset_top=-32
+	credit.offset_bottom=-18
+	credit.hide()
+	add_child(credit)
+	bar.visibility_changed.connect(func(): credit.visible=bar.visible)
 
 func _process(_delta: float) -> void:
 	if Dialogue.active and Dialogue.dialogue_id=="opening":

@@ -66,6 +66,14 @@ func _ready() -> void:
 		time_label=Label.new()
 		footer.add_child(time_label)
 	else:
+		var credit := Label.new()
+		credit.name="WebsiteCredit"
+		credit.text="snugglefox.net"
+		credit.add_theme_font_size_override("font_size",10)
+		credit.add_theme_color_override("font_color",Color.WHITE)
+		credit.mouse_filter=Control.MOUSE_FILTER_IGNORE
+		credit.size_flags_vertical=Control.SIZE_SHRINK_END
+		footer.add_child(credit)
 		var spacer := Control.new()
 		spacer.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 		footer.add_child(spacer)

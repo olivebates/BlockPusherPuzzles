@@ -8,6 +8,13 @@ Earlier work predates this log and has no assigned release history.
 
 ### Changed
 
+- Moved the main gameplay "snugglefox.net" credit to the bottom-left corner,
+  above the support-button row.
+
+- Added small white "snugglefox.net" text above the main game's three bottom
+  buttons, revealed alongside them, and at the bottom left during custom-level
+  play. The labels do not intercept mouse input.
+
 - Automatic rainbow hue cycling now changes only the rendered world palette.
   The Tab map keeps the last explicitly chosen target color, including when
   sampling a tile at a new closest approach during the cycle. Normal color
